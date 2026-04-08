@@ -36,7 +36,7 @@ if target != "(Choisir)":
 
         try:
             # ON UTILISE ICI LE NOM DE MODÈLE LE PLUS COMPATIBLE
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
             
             context = f"Tu es le Sage Anunnaki ENKI. Réponds en te basant sur les Chroniques de Sitchin. Sujet : {target}."
             
