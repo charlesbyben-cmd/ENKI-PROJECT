@@ -1,8 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- CONFIGURATION PRO ---
-st.set_page_config(page_title="ENKI v2.6 - Auto-Adaptative", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION 2026 ---
+st.set_page_config(page_title="ENKI v2.7 - Gen 3 Edition", layout="wide", page_icon="🏛️")
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -18,43 +18,36 @@ if "locked_data" not in st.session_state:
         "Ambiance_Nibiru": "Fréquences basses, résonances métalliques, chœurs profonds."
     }
 
-# --- DÉTECTION DYNAMIQUE DU MODÈLE (Solution au 404) ---
+# --- DÉTECTION DYNAMIQUE (MAJ 2026) ---
 @st.cache_resource
 def get_best_model():
     try:
-        # On liste tous les modèles disponibles sur ton compte Pro
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         
-        # On cherche par priorité : Gemini 2.0, puis 1.5 Flash
+        # Priorité 2026 : On cherche Gemini 3 en priorité
         for m in available_models:
-            if "gemini-2.0-flash" in m: return genai.GenerativeModel(m), m
+            if "gemini-3-flash" in m: return genai.GenerativeModel(m), m
         for m in available_models:
             if "gemini-1.5-flash" in m: return genai.GenerativeModel(m), m
             
-        # Si rien n'est trouvé, on prend le tout premier de la liste
-        return genai.GenerativeModel(available_models[0]), available_models[0]
+        return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
     except Exception as e:
-        st.error(f"Erreur de détection : {e}")
-        return None, None
+        return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
 
-# --- SIDEBAR ---
+# Initialisation
+model_obj, model_name = get_best_model()
+
+# --- SIDEBAR & INTERFACE ---
 with st.sidebar:
     st.title("🧠 Mémoire Vive")
-    mode = st.radio("Mode d'opération :", ["Chercheur Universel", "Sage Anunnaki"])
+    mode = st.radio("Mode :", ["Chercheur Universel", "Sage Anunnaki"])
     st.divider()
-    with st.expander("📝 Gérer les Verrous"):
-        for k, v in st.session_state.locked_data.items():
-            st.session_state.locked_data[k] = st.text_area(f"{k}", v)
     if st.button("🗑️ Reset Discussion"):
         st.session_state.messages = []
         st.rerun()
 
-# Récupération du modèle
-model_obj, model_name = get_best_model()
-
-st.title(f"🏛️ ENKI v2.6")
-if model_name:
-    st.caption(f"📡 Connecté sur la fréquence : {model_name}")
+st.title(f"🏛️ ENKI v2.7")
+st.caption(f"📡 Signal stabilisé sur : {model_name}")
 
 tabs = st.tabs(["📜 Intelligence", "🎨 Studio Image", "🎬 Studio Vidéo", "🎼 Studio Sonore"])
 
@@ -66,20 +59,14 @@ with tabs[0]:
 
     with st.form("chat_form", clear_on_submit=True):
         user_input = st.text_area("Analyse ou Question...", height=150)
-        submitted = st.form_submit_button("Lancer la Réflexion")
-        
-        if submitted and user_input:
+        if st.form_submit_button("Lancer la Réflexion"):
             st.session_state.messages.append({"role": "user", "content": user_input})
-            if model_obj:
-                try:
-                    contexte = f"Mode {mode}. Verrous : {st.session_state.locked_data}"
-                    response = model_obj.generate_content(f"{contexte}\n\nQuestion : {user_input}")
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur de communication : {e}")
-            else:
-                st.error("Aucun modèle trouvé.")
+            try:
+                contexte = f"Tu es {mode}. Verrous : {st.session_state.locked_data}"
+                response = model_obj.generate_content(f"{contexte}\n\n{user_input}")
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erreur de communication : {e}")
 
-# --- Garder les autres onglets identiques ---
-# (Studio Image, Vidéo, Sonore restent les mêmes que v2.5)
+# (Les autres onglets Image, Vidéo, Sonore restent identiques)
