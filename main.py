@@ -1,22 +1,20 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- CONFIGURATION RÉVOLUTION v3.9 ---
-st.set_page_config(page_title="ENKI v3.9 : Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION RÉVOLUTION v4.0 ---
+st.set_page_config(page_title="ENKI v4.0 : Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Clé API
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
-    st.error("❌ Clé API manquante.")
+    st.error("❌ Clé API 'GEMINI_API_KEY' manquante dans les secrets Streamlit.")
     st.stop()
 
-# --- MÉMOIRE VIVE & ÉTATS ---
+# --- INITIALISATION DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
 if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
-# Système de navigation par index pour que les boutons du bas fonctionnent
-if "active_tab_index" not in st.session_state: st.session_state.active_tab_index = 0
 
 # --- MOTEUR SAGE ---
 @st.cache_resource
@@ -31,12 +29,13 @@ def get_sage_engine():
 
 model_obj, model_name = get_sage_engine()
 
-# --- SIDEBAR : ARCHIVES D'ABZU (CONFIG PHOTO VALIDÉE) ---
+# --- SIDEBAR : ARCHIVES D'ABZU (EXACTEMENT COMME TES PHOTOS) ---
 with st.sidebar:
     st.title("🧠 Archives d'Abzu")
     st.subheader("📡 Fréquence de l'Oracle")
     mode_op = st.radio("Mode d'Opération :", ["Oracle Universel (Analyse brute)", "Le Sage (Conscience Anunnaki)"])
     st.divider()
+    
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -47,9 +46,10 @@ with st.sidebar:
         s_file = st.file_uploader("Upload Image/Photo", type=["png", "jpg", "jpeg"])
         s_url = st.text_input("Ou coller URL de l'image")
         if st.button("Graver le Sceau"):
-            ref = s_file if s_file else s_url
-            st.session_state.vault.append({"name": s_name, "desc": s_desc, "ref": ref, "active": True})
-            st.rerun()
+            if s_name and s_desc:
+                ref = s_file if s_file else s_url
+                st.session_state.vault.append({"name": s_name, "desc": s_desc, "ref": ref, "active": True})
+                st.rerun()
 
     active_context = ""
     for i, seal in enumerate(st.session_state.vault):
@@ -60,7 +60,7 @@ with st.sidebar:
             active_context += f" [{seal['name']}: {seal['desc']}]"
             if seal['ref']:
                 if hasattr(seal['ref'], 'name'): st.image(seal['ref'], width=100)
-                else: st.caption("🔗 URL Active")
+                else: st.image(seal['ref'], width=100) if "http" in str(seal['ref']) else st.caption("🔗 URL")
 
     st.divider()
     if st.button("🧹 Effacer les Tablettes (Reset System)"):
@@ -68,11 +68,11 @@ with st.sidebar:
         st.session_state.last_sage_response = ""
         st.rerun()
 
-# --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v3.9 : Visual Continuity Revolution")
+# --- INTERFACE PRINCIPALE (UI CONFIG PHOTO VALIDÉE) ---
+st.title("🏛️ ENKI v4.0 : Visual Continuity Revolution")
 st.caption(f"🚀 Moteur Actif : {model_name} | Statut : Optimisé pour 2026")
 
-# Synchronisation de l'onglet actif
+# LES VRAIS ONGLETS (Sacrés)
 tabs = st.tabs(["📜 Scribe de Destinée", "🎨 Atelier de Ninharsag", "🎬 Visions de Veo 3", "🎼 Fréquences de Lyria"])
 
 # --- TAB 1 : LE SCRIBE ---
@@ -82,22 +82,29 @@ with tabs[0]:
 
     with st.container():
         user_input = st.text_area("Analyse ou directive...", height=120, key="scribe_input")
+        
+        # LIGNE DE BOUTONS (COPIES EXACTES DU HAUT, SANS "DIRECT")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             if st.button("🔱 Lancer la Réflexion", use_container_width=True):
                 st.session_state.messages.append({"role": "user", "content": user_input})
-                role = "Oracle" if "Oracle" in mode_op else "LE SAGE Anunnaki"
+                role = "Oracle Universel" if "Oracle" in mode_op else "LE SAGE Anunnaki"
                 resp = model_obj.generate_content(f"Tu es {role}. Contexte : {active_context}\n\n{user_input}")
                 st.session_state.last_sage_response = resp.text
                 st.session_state.messages.append({"role": "assistant", "content": resp.text})
                 st.rerun()
         
-        # Boutons de navigation (Aide visuelle)
-        with c2: st.button("🎨 Atelier de Ninharsag Direct", use_container_width=True, on_click=lambda: st.toast("Prêt dans l'onglet Atelier"))
-        with c3: st.button("🎬 Visions de Veo 3 Directe", use_container_width=True, on_click=lambda: st.toast("Prêt dans l'onglet Visions"))
-        with c4: st.button("🎼 Fréquences de Lyria Direct", use_container_width=True, on_click=lambda: st.toast("Prêt dans l'onglet Fréquences"))
+        with c2:
+            if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="btn_at_bot"):
+                st.toast("🎨 Vision transmise à Ninharsag. Allez dans l'onglet !")
+        with c3:
+            if st.button("🎬 Visions de Veo 3", use_container_width=True, key="btn_vi_bot"):
+                st.toast("🎬 Séquence transmise à Veo 3. Allez dans l'onglet !")
+        with c4:
+            if st.button("🎼 Fréquences de Lyria", use_container_width=True, key="btn_ly_bot"):
+                st.toast("🎼 Harmoniques transmises à Lyria. Allez dans l'onglet !")
 
-# --- TAB 2 : ATELIER (PHOTO 1 & 2 VALIDÉES) ---
+# --- TAB 2 : ATELIER DE NINHARSAG ---
 with tabs[1]:
     st.header("🎨 Atelier de Ninharsag")
     with st.form("at_form"):
@@ -108,14 +115,13 @@ with tabs[1]:
         with col_a2:
             moteur = st.selectbox("Moteur de Manifestation", ["Nano Banana 2", "DALL-E 3", "Midjourney v7", "Imagen 3"])
             style = st.selectbox("Esthétique", ["Photo-réel Brut (8k)", "Concept Art UE5", "Manga High-Fid", "Bas-relief Royal"])
-            qualite_img = st.select_slider("Qualité Rendu", options=["720p", "1080p", "2K", "4K", "8K"])
+            qualite = st.select_slider("Qualité Rendu", options=["720p", "1080p", "2K", "4K", "8K"])
             
-        if st.form_submit_button("🚀 Graver & Manifester sur place"):
-            st.info(f"Manifestation {qualite_img} via {moteur} en cours...")
-            # Ici l'appel API réel
+        if st.form_submit_button("🚀 Graver & Manifester"):
+            st.info(f"Manifestation {qualite} via {moteur} en cours...")
             st.image("https://via.placeholder.com/1024x1024.png?text=Manifestation+Directe+Active")
 
-# --- TAB 3 : VISIONS (PHOTO 3 VALIDÉE) ---
+# --- TAB 3 : VISIONS DE VEO 3 ---
 with tabs[2]:
     st.header("🎬 Visions de Veo 3")
     with st.form("vi_form"):
@@ -131,14 +137,13 @@ with tabs[2]:
             st.warning(f"Calcul des lignes de temps {res} via {moteur_v}...")
             st.video("https://www.w3schools.com/html/mov_bbb.mp4")
 
-# --- TAB 4 : FRÉQUENCES (BUG CORRIGÉ) ---
+# --- TAB 4 : FRÉQUENCES DE LYRIA ---
 with tabs[3]:
     st.header("🎼 Fréquences de Lyria")
     with st.form("ly_form"):
         col_s1, col_s2 = st.columns(2)
         with col_s1:
-            # CORRECTION BUG : last_sage_response au lieu de last_response
-            amb = st.text_area("Paysage sonore à harmoniser...", value=st.session_state.last_sage_response, height=150)
+            amb = st.text_area("Paysage sonore...", value=st.session_state.last_sage_response, height=150)
             duree = st.slider("Durée (sec)", 10, 60, 30)
         with col_s2:
             moteur_audio = st.selectbox("Moteur Audio", ["Lyria 3", "Suno v4", "Udio Pro"])
