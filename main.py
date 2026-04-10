@@ -3,8 +3,8 @@ import google.generativeai as genai
 import PIL.Image
 import io
 
-# --- CONFIGURATION STRICTE v3.5 ---
-st.set_page_config(page_title="ENKI v3.5 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v4.0 ---
+st.set_page_config(page_title="ENKI v4.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Accès API
 if "GEMINI_API_KEY" in st.secrets:
@@ -19,16 +19,34 @@ if "chronicles" not in st.session_state:
 if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 if "vault" not in st.session_state: st.session_state.vault = []
-if "up_key" not in st.session_state: st.session_state.up_key = 0 # Pour reset l'uploader
+if "up_key" not in st.session_state: st.session_state.up_key = 0 
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE (CONFIGURATION STABLE) ---
-@st.cache_resource
-def load_sage():
-    return genai.GenerativeModel("gemini-1.5-flash")
-
-model = load_sage()
+# --- LE MOTEUR CASCADE (ANTI-ERREUR 404) ---
+def obtenir_reponse_sage(prompt_parts):
+    # Vérifie s'il y a une image dans la demande
+    has_image = any(isinstance(p, PIL.Image.Image) or (isinstance(p, dict) and 'mime_type' in p) for p in prompt_parts)
+    
+    # Liste de survie : essaie les modèles un par un jusqu'à ce que l'un fonctionne
+    modeles_a_tester = [
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro-latest",
+        "gemini-pro-vision" if has_image else "gemini-pro"
+    ]
+    
+    derniere_erreur = None
+    for nom_modele in modeles_a_tester:
+        try:
+            m = genai.GenerativeModel(nom_modele)
+            reponse = m.generate_content(prompt_parts)
+            return reponse.text
+        except Exception as e:
+            derniere_erreur = e
+            continue # Passe au modèle suivant
+            
+    raise Exception(f"Ta clé API ou le serveur bloque l'accès aux modèles de vision. Détail : {derniere_erreur}")
 
 # --- SIDEBAR : ARCHIVES D'ABZU ---
 with st.sidebar:
@@ -57,7 +75,7 @@ with st.sidebar:
 
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AVEC TEXTE RÉTABLI)
+    # SCEAUX DE PERSISTANCE
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -89,10 +107,10 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v3.5 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Statut : Optimisé pour 2026")
+st.title("🏛️ ENKI v4.0 : The Visual Continuity Revolution")
+st.caption("🚀 Moteur Actif : Cascade IA | Statut : Optimisé pour 2026")
 
-# NAVIGATION SUPÉRIEURE (LES 4 ONGLETS)
+# NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
 tabs = ["📜 Scribe de Destinée", "🎨 Atelier de Ninharsag", "🎬 Visions de Veo 3", "🎼 Fréquences de Lyria"]
 for i, t in enumerate(tabs):
@@ -112,39 +130,39 @@ if st.session_state.view == "📜 Scribe de Destinée":
     with st.container():
         # UPLOAD POUR ANALYSE
         up_file = st.file_uploader("📎 Charger Vision, Séquence ou Fréquence pour analyse...", 
-                                  type=["png", "jpg", "jpeg", "mp4", "mp3", "pdf"], key=f"up_{st.session_state.up_key}")
+                                  type=["png", "jpg", "jpeg", "pdf"], key=f"up_{st.session_state.up_key}")
         
         prompt = st.text_area("Analyse ou directive...", height=150, key="in_main")
         
-        # LES 4 BOUTONS FIXES (MÊMES NOMS QU'EN HAUT)
+        # LES 4 BOUTONS FIXES
         b = st.columns(4)
         with b[0]:
             if st.button("🔱 Lancer la Réflexion", use_container_width=True):
                 if prompt or up_file:
-                    user_msg = prompt if prompt else "Analyse du document joint."
+                    user_msg = prompt if prompt else "Analyse de l'image jointe."
                     active_c["messages"].append({"role": "user", "content": user_msg})
                     
                     # Construction du prompt Multi-Modal
                     parts = [f"Tu es le Sage. Contexte de persistance : {active_ctx}\n\n{user_msg}"]
                     
                     if up_file:
-                        with st.spinner("Le Sage ouvre ses yeux sur la vision..."):
-                            try:
-                                # Lecture directe des données pour éviter les blocages
-                                file_data = up_file.getvalue()
-                                parts.append({"mime_type": up_file.type, "data": file_data})
-                            except: st.error("Impossible de lire le fichier.")
-
-                    with st.spinner("Le Sage scrute les tablettes..."):
                         try:
-                            resp = model.generate_content(parts)
-                            if resp.text:
-                                active_c["last_response"] = resp.text
-                                active_c["messages"].append({"role": "assistant", "content": resp.text})
-                                st.session_state.up_key += 1 # Reset uploader
-                                st.rerun()
+                            # Extraction stricte de l'image
+                            img_data = PIL.Image.open(io.BytesIO(up_file.getvalue()))
+                            parts.append(img_data)
+                        except Exception as e: 
+                            st.error(f"Erreur de format d'image : {e}")
+
+                    with st.spinner("Le Sage analyse la vision..."):
+                        try:
+                            # UTILISATION DU NOUVEAU MOTEUR CASCADE
+                            reponse_texte = obtenir_reponse_sage(parts)
+                            active_c["last_response"] = reponse_texte
+                            active_c["messages"].append({"role": "assistant", "content": reponse_texte})
+                            st.session_state.up_key += 1 # Reset uploader
+                            st.rerun()
                         except Exception as e:
-                            st.error(f"Erreur de flux : {e}")
+                            st.error(str(e))
         
         with b[1]:
             if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="b_at"):
