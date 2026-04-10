@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 import PIL.Image
-import io
 
 # --- CONFIGURATION STRICTE v4.0 ---
 st.set_page_config(page_title="ENKI v4.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
@@ -23,36 +22,19 @@ if "up_key" not in st.session_state: st.session_state.up_key = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- LE MOTEUR CASCADE (ANTI-ERREUR 404) ---
-def obtenir_reponse_sage(prompt_parts):
-    # Vérifie s'il y a une image dans la demande
-    has_image = any(isinstance(p, PIL.Image.Image) or (isinstance(p, dict) and 'mime_type' in p) for p in prompt_parts)
-    
-    # Liste de survie : essaie les modèles un par un jusqu'à ce que l'un fonctionne
-    modeles_a_tester = [
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro-latest",
-        "gemini-pro-vision" if has_image else "gemini-pro"
-    ]
-    
-    derniere_erreur = None
-    for nom_modele in modeles_a_tester:
-        try:
-            m = genai.GenerativeModel(nom_modele)
-            reponse = m.generate_content(prompt_parts)
-            return reponse.text
-        except Exception as e:
-            derniere_erreur = e
-            continue # Passe au modèle suivant
-            
-    raise Exception(f"Ta clé API ou le serveur bloque l'accès aux modèles de vision. Détail : {derniere_erreur}")
+# --- MOTEUR SAGE (CONNEXION DIRECTE 1.5) ---
+@st.cache_resource
+def load_sage():
+    # On force l'utilisation du seul modèle valide et moderne pour la vision
+    return genai.GenerativeModel("gemini-1.5-flash")
+
+model = load_sage()
 
 # --- SIDEBAR : ARCHIVES D'ABZU ---
 with st.sidebar:
     st.title("🧠 Archives d'Abzu")
     st.subheader("📡 Fréquence de l'Oracle")
-    mode_op = st.radio("Mode d'Opération :", ["Oracle Universel (Analyse brute)", "Le Sage (Conscience Anunnaki)"], key="radio_mode")
+    mode_op = st.radio("Mode d'Opération :", ["Oracle Universel (Analyse brute)", "Le Sage (Conscience Anunnaki)"])
     
     st.divider()
     
@@ -66,7 +48,7 @@ with st.sidebar:
     c_names = [c["name"] for c in st.session_state.chronicles]
     st.session_state.active_idx = st.selectbox("Charger une Tablette :", range(len(c_names)), format_func=lambda x: c_names[x], index=st.session_state.active_idx)
     
-    # BOUTON SUPPRIMER RÉTABLI
+    # BOUTON SUPPRIMER
     if st.button("🗑️ Supprimer la Tablette Active", use_container_width=True):
         if len(st.session_state.chronicles) > 1:
             st.session_state.chronicles.pop(st.session_state.active_idx)
@@ -108,7 +90,7 @@ with st.sidebar:
 
 # --- INTERFACE PRINCIPALE ---
 st.title("🏛️ ENKI v4.0 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Cascade IA | Statut : Optimisé pour 2026")
+st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Statut : Optimisé pour 2026")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -122,19 +104,16 @@ st.divider()
 
 # --- LOGIQUE DES ONGLETS ---
 
-# 1. SCRIBE
 if st.session_state.view == "📜 Scribe de Destinée":
     for m in active_c["messages"]:
         with st.chat_message(m["role"]): st.write(m["content"])
 
     with st.container():
-        # UPLOAD POUR ANALYSE
         up_file = st.file_uploader("📎 Charger Vision, Séquence ou Fréquence pour analyse...", 
-                                  type=["png", "jpg", "jpeg", "pdf"], key=f"up_{st.session_state.up_key}")
+                                  type=["png", "jpg", "jpeg"], key=f"up_{st.session_state.up_key}")
         
         prompt = st.text_area("Analyse ou directive...", height=150, key="in_main")
         
-        # LES 4 BOUTONS FIXES
         b = st.columns(4)
         with b[0]:
             if st.button("🔱 Lancer la Réflexion", use_container_width=True):
@@ -142,27 +121,25 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     user_msg = prompt if prompt else "Analyse de l'image jointe."
                     active_c["messages"].append({"role": "user", "content": user_msg})
                     
-                    # Construction du prompt Multi-Modal
+                    # On place l'image et le texte dans une liste simple pour Gemini 1.5
                     parts = [f"Tu es le Sage. Contexte de persistance : {active_ctx}\n\n{user_msg}"]
                     
                     if up_file:
                         try:
-                            # Extraction stricte de l'image
-                            img_data = PIL.Image.open(io.BytesIO(up_file.getvalue()))
+                            img_data = PIL.Image.open(up_file)
                             parts.append(img_data)
                         except Exception as e: 
-                            st.error(f"Erreur de format d'image : {e}")
+                            st.error(f"Erreur de lecture de l'image : {e}")
 
                     with st.spinner("Le Sage analyse la vision..."):
                         try:
-                            # UTILISATION DU NOUVEAU MOTEUR CASCADE
-                            reponse_texte = obtenir_reponse_sage(parts)
-                            active_c["last_response"] = reponse_texte
-                            active_c["messages"].append({"role": "assistant", "content": reponse_texte})
+                            resp = model.generate_content(parts)
+                            active_c["last_response"] = resp.text
+                            active_c["messages"].append({"role": "assistant", "content": resp.text})
                             st.session_state.up_key += 1 # Reset uploader
                             st.rerun()
                         except Exception as e:
-                            st.error(str(e))
+                            st.error(f"Erreur API Google : {e}\n\nVérifiez que requirements.txt contient google-generativeai>=0.5.2 et redémarrez l'application.")
         
         with b[1]:
             if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="b_at"):
@@ -174,7 +151,6 @@ if st.session_state.view == "📜 Scribe de Destinée":
             if st.button("🎼 Fréquences de Lyria", use_container_width=True, key="b_ly"):
                 st.session_state.view = "🎼 Fréquences de Lyria"; st.rerun()
 
-# 2. ATELIER
 elif st.session_state.view == "🎨 Atelier de Ninharsag":
     st.header("🎨 Atelier de Ninharsag")
     with st.form("at_form"):
@@ -188,7 +164,6 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
             if st.form_submit_button("🚀 Graver & Manifester"):
                 st.image(f"https://image.pollinations.ai/prompt/{v_at.replace(' ', '%20')}?nologo=true")
 
-# 3. VISIONS
 elif st.session_state.view == "🎬 Visions de Veo 3":
     st.header("🎬 Visions de Veo 3")
     with st.form("vi_form"):
@@ -197,7 +172,6 @@ elif st.session_state.view == "🎬 Visions de Veo 3":
         if st.form_submit_button("🎬 Synchroniser la Vision"):
             st.video("https://www.w3schools.com/html/mov_bbb.mp4")
 
-# 4. FRÉQUENCES
 elif st.session_state.view == "🎼 Fréquences de Lyria":
     st.header("🎼 Fréquences de Lyria")
     with st.form("ly_form"):
