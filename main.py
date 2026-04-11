@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.3 (Omniscient Seal & Anti-404) ---
-st.set_page_config(page_title="ENKI v5.3 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v5.4 (Perfect Synapse) ---
+st.set_page_config(page_title="ENKI v5.4 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -31,8 +31,10 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
-# Variable pour l'auto-description des Sceaux
-if "seal_auto_desc" not in st.session_state: st.session_state.seal_auto_desc = ""
+# NOUVEAU : Initialisation stricte des champs du Sceau pour la mise à jour dynamique
+if "v_n_input" not in st.session_state: st.session_state.v_n_input = ""
+if "v_d_input" not in st.session_state: st.session_state.v_d_input = ""
+if "v_url_input" not in st.session_state: st.session_state.v_url_input = ""
 
 # Stockage Images/Vidéos 
 if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
@@ -56,34 +58,23 @@ if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE (BOUCLIER ANTI-404) ---
+# --- MOTEUR SAGE (SÉCURISÉ) ---
 @st.cache_resource
 def get_sage_engine():
     try:
-        # Le système scanne ta clé API pour voir les modèles autorisés
         modeles_dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        
-        # Ordre de préférence absolue pour la Vision
+        # On force les modèles 1.5 stables et on ignore les expériementaux (2.5)
         cibles = [
-            "models/gemini-1.5-flash-latest",
             "models/gemini-1.5-flash",
-            "models/gemini-1.5-pro-latest",
-            "models/gemini-1.5-pro",
-            "models/gemini-pro-vision"
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-1.5-pro"
         ]
-        
         for cible in cibles:
             if cible in modeles_dispos:
                 return genai.GenerativeModel(cible.replace("models/", ""))
-                
-        # Si aucun préféré n'est trouvé, on prend le premier modèle génératif disponible
-        if modeles_dispos:
-            return genai.GenerativeModel(modeles_dispos[0].replace("models/", ""))
     except:
         pass
-    
-    # Sécurité ultime par défaut
-    return genai.GenerativeModel("gemini-1.5-flash-latest")
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 model = get_sage_engine()
 
@@ -140,46 +131,54 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AVEC AUTO-DESCRIPTION OMNISCIENTE)
+    # SCEAUX DE PERSISTANCE (AVEC AUTO-DESCRIPTION MAGIQUE)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
-        v_n = st.text_input("Nom de l'élément (Ex: Ea)", key="v_n_input")
+        # Utilisation stricte des clés de session
+        st.text_input("Nom de l'élément (Ex: Ea)", key="v_n_input")
         
-        v_u = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u_input")
+        v_u = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u_file")
         
         # BOUTON MAGIQUE D'AUTO-DESCRIPTION
         if v_u:
-            if st.button("👁️ Extraire l'Essence (Auto-Description)", use_container_width=True):
-                with st.spinner(f"Le Sage analyse la physionomie (Moteur : {model.model_name})..."):
+            if st.button("👁️ Extraire l'Essence", use_container_width=True):
+                with st.spinner("Le Sage analyse la physionomie..."):
                     try:
                         imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         resp = model.generate_content(prompt_analyse)
-                        st.session_state.seal_auto_desc = resp.text
+                        
+                        # Injection forcée dans la case de texte
+                        try:
+                            st.session_state.v_d_input = resp.text
+                        except ValueError:
+                            st.session_state.v_d_input = "L'analyse a été bloquée par le filtre de sécurité de l'IA (visage réel détecté). Décrivez le personnage manuellement."
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Erreur d'analyse (Vérifie ta connexion) : {e}")
+                        st.error(f"Le flux a été interrompu : {e}")
         
-        # La case de description liée à la mémoire (se remplit toute seule)
-        v_d = st.text_area("2. Physique / Description", value=st.session_state.seal_auto_desc, height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
+        # Case de description (Reliée directement à l'extraction)
+        st.text_area("2. Physique / Description", height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
         
-        v_url = st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
+        st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
         
-        if st.button("3. Graver le Sceau", key="v_b_input", type="primary"):
-            if v_n: 
+        if st.button("3. Graver le Sceau", type="primary"):
+            if st.session_state.v_n_input: 
                 saved_refs = [f.getvalue() for f in v_u] if v_u else []
                 
                 st.session_state.vault.append({
-                    "name": v_n, 
-                    "desc": v_d, 
+                    "name": st.session_state.v_n_input, 
+                    "desc": st.session_state.v_d_input, 
                     "refs": saved_refs, 
-                    "url": v_url,
+                    "url": st.session_state.v_url_input,
                     "active": True
                 })
-                # On nettoie la case magique pour le prochain sceau
-                st.session_state.seal_auto_desc = ""
+                # Nettoyage automatique des champs après gravure !
+                st.session_state.v_n_input = ""
+                st.session_state.v_d_input = ""
+                st.session_state.v_url_input = ""
                 st.rerun()
             else:
                 st.warning("Le nom de l'élément est obligatoire.")
@@ -214,8 +213,8 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.3 : The Visual Continuity Revolution")
-st.caption(f"🚀 Moteur Actif : Automatique | Manifestation Réelle : ACTIVÉE")
+st.title("🏛️ ENKI v5.4 : The Visual Continuity Revolution")
+st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -255,7 +254,7 @@ if st.session_state.view == "📜 Scribe de Destinée":
                         except Exception as e:
                             st.error(f"Erreur d'intégration de l'image : {e}")
 
-                    with st.spinner(f"Le Sage intègre les visions (Moteur : {model.model_name})..."):
+                    with st.spinner("Le Sage intègre les multiples visions..."):
                         try:
                             resp = model.generate_content(prompt_parts)
                             active_c["last_response"] = resp.text
