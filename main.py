@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v6.0 (Titanium Matrix) ---
-st.set_page_config(page_title="ENKI v6.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.1 (Lightweaver Matrix - Anti-Freeze) ---
+st.set_page_config(page_title="ENKI v6.1 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -15,7 +15,7 @@ else:
     st.error("❌ Clé API Google 'GEMINI_API_KEY' manquante dans les secrets.")
     st.stop()
 
-# --- FONCTION DIVINE : CONVERSION JPEG POUR GALERIE iPAD ---
+# --- FONCTION DIVINE 1 : CONVERSION JPEG POUR GALERIE iPAD ---
 def convert_to_jpeg(raw_bytes):
     try:
         img = PIL.Image.open(io.BytesIO(raw_bytes)).convert("RGB")
@@ -25,8 +25,20 @@ def convert_to_jpeg(raw_bytes):
     except Exception:
         return raw_bytes 
 
+# --- FONCTION DIVINE 2 : OPTIMISATION DES IMAGES POUR LE SAGE (ANTI-FREEZE) ---
+def optimize_for_sage(raw_bytes):
+    try:
+        img = PIL.Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        # Réduit l'image à une taille digeste pour l'API sans perdre le visage
+        img.thumbnail((1024, 1024)) 
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return PIL.Image.open(buf)
+    except Exception as e:
+        # En cas d'erreur, on essaie de renvoyer l'image brute (risque de freeze)
+        return PIL.Image.open(io.BytesIO(raw_bytes))
+
 # --- MOTEUR BLINDÉ (TITANIUM FALLBACK ANTI-404) ---
-# Cette fonction essaie les modèles un par un jusqu'à ce que l'un d'eux réponde
 def generate_content_with_fallback(prompt_parts):
     models_to_try = [
         "gemini-1.5-flash",
@@ -42,7 +54,7 @@ def generate_content_with_fallback(prompt_parts):
         except Exception as e:
             last_error = str(e)
             continue
-    raise Exception(f"Rejet total des serveurs Google. Dernière erreur : {last_error}")
+    raise Exception(f"Rejet total des serveurs Google. Erreur : {last_error}")
 
 # --- INITIALISATION DES SYSTÈMES ET DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
@@ -130,7 +142,7 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AUTO-DESCRIPTION BLINDÉE)
+    # SCEAUX DE PERSISTANCE (AVEC OPTIMISATION ANTI-FREEZE)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -142,15 +154,15 @@ with st.sidebar:
         # BOUTON MAGIQUE D'AUTO-DESCRIPTION
         if v_u:
             if st.button("👁️ Extraire l'Essence", use_container_width=True):
-                with st.spinner("Le Sage analyse la physionomie..."):
+                with st.spinner("Le Sage compresse et analyse tes visions..."):
                     try:
-                        imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
+                        # On utilise le compresseur avant d'envoyer au Sage !
+                        imgs_to_analyze = [optimize_for_sage(f.getvalue()) for f in v_u]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         
-                        # UTILISATION DU MOTEUR BLINDÉ
                         resp, used_model = generate_content_with_fallback(prompt_analyse)
                         st.session_state.v_d_input = resp.text
-                        st.success(f"Essence extraite par {used_model}")
+                        st.success("Essence extraite avec succès !")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Le flux a été interrompu : {e}")
@@ -190,7 +202,8 @@ with st.sidebar:
                 for idx, img_bytes in enumerate(seal['refs']):
                     cols[idx % 4].image(img_bytes)
                     try:
-                        active_seal_images.append(PIL.Image.open(io.BytesIO(img_bytes)))
+                        # On compresse aussi les images du Sceau pour les questions futures au Scribe !
+                        active_seal_images.append(optimize_for_sage(img_bytes))
                     except:
                         pass
                         
@@ -206,7 +219,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v6.0 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v6.1 : The Visual Continuity Revolution")
 st.caption("🚀 Moteur Actif : Titanium Fallback | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -242,14 +255,14 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     
                     if up_file:
                         try:
-                            img = PIL.Image.open(up_file)
+                            # Compression auto pour le Scribe aussi !
+                            img = optimize_for_sage(up_file.getvalue())
                             prompt_parts.append(img)
                         except Exception as e:
                             st.error(f"Erreur d'intégration de l'image : {e}")
 
                     with st.spinner("Le Sage intègre les multiples visions..."):
                         try:
-                            # UTILISATION DU MOTEUR BLINDÉ
                             resp, used_model = generate_content_with_fallback(prompt_parts)
                             active_c["last_response"] = resp.text
                             active_c["messages"].append({"role": "assistant", "content": resp.text})
