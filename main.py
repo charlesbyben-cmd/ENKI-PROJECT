@@ -1,5 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
+import PIL.Image
+import io
+import requests
 
 # --- CONFIGURATION STRICTE v4.0 ---
 st.set_page_config(page_title="ENKI v4.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
@@ -19,21 +22,21 @@ if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Desti
 if "vault" not in st.session_state: st.session_state.vault = []
 if "up_key" not in st.session_state: st.session_state.up_key = 0 
 
+# NOUVEAU : Mémoire pour le stockage d'images
+if "saved_images" not in st.session_state: st.session_state.saved_images = []
+if "last_gen_url" not in st.session_state: st.session_state.last_gen_url = ""
+if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
+
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE (DÉTECTION AUTOMATIQUE ANTI-404) ---
+# --- MOTEUR SAGE (CASCADE IA ANTI-404) ---
 @st.cache_resource
 def load_sage():
     try:
-        # Scanne les modèles autorisés par TA clé API
         modeles_dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        
-        # Cherche le meilleur modèle dans l'ordre de puissance
         for cible in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro", "models/gemini-pro-vision"]:
             if cible in modeles_dispos:
                 return genai.GenerativeModel(cible.replace("models/", ""))
-                
-        # Secours : prend le premier modèle qui fonctionne
         if modeles_dispos:
             return genai.GenerativeModel(modeles_dispos[0].replace("models/", ""))
     except:
@@ -60,7 +63,6 @@ with st.sidebar:
     c_names = [c["name"] for c in st.session_state.chronicles]
     st.session_state.active_idx = st.selectbox("Charger une Tablette :", range(len(c_names)), format_func=lambda x: c_names[x], index=st.session_state.active_idx)
     
-    # BOUTON SUPPRIMER
     if st.button("🗑️ Supprimer la Tablette Active", use_container_width=True):
         if len(st.session_state.chronicles) > 1:
             st.session_state.chronicles.pop(st.session_state.active_idx)
@@ -68,6 +70,16 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
+
+    # NOUVEAU : GALERIE DE STOCKAGE DES MANIFESTATIONS
+    if len(st.session_state.saved_images) > 0:
+        st.subheader("📖 Chroniques de Manifestation")
+        for img_data in reversed(st.session_state.saved_images):
+            st.image(img_data, use_container_width=True)
+        if st.button("🧹 Vider la Galerie"):
+            st.session_state.saved_images = []
+            st.rerun()
+        st.divider()
     
     # SCEAUX DE PERSISTANCE
     st.subheader("📌 Sceaux de Persistance")
@@ -122,13 +134,11 @@ if st.session_state.view == "📜 Scribe de Destinée":
         with st.chat_message(m["role"]): st.write(m["content"])
 
     with st.container():
-        # UPLOAD POUR ANALYSE
         up_file = st.file_uploader("📎 Charger Vision, Séquence ou Fréquence pour analyse...", 
                                   type=["png", "jpg", "jpeg", "pdf"], key=f"up_{st.session_state.up_key}")
         
         prompt = st.text_area("Analyse ou directive...", height=150, key="in_main")
         
-        # LES 4 BOUTONS FIXES
         b = st.columns(4)
         with b[0]:
             if st.button("🔱 Lancer la Réflexion", use_container_width=True):
@@ -140,21 +150,20 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     
                     if up_file:
                         try:
-                            # SOLUTION ANTI-404 : Envoi des données brutes au lieu de PIL.Image
                             parts.append({"mime_type": up_file.type, "data": up_file.getvalue()})
                         except Exception as e: 
                             st.error(f"Erreur de lecture du fichier : {e}")
 
-                    with st.spinner(f"Le Sage analyse la vision (Moteur : {model.model_name})..."):
+                    with st.spinner("Le Sage analyse la vision..."):
                         try:
                             resp = model.generate_content(parts)
                             if resp.text:
                                 active_c["last_response"] = resp.text
                                 active_c["messages"].append({"role": "assistant", "content": resp.text})
-                                st.session_state.up_key += 1 # Reset uploader
+                                st.session_state.up_key += 1 
                                 st.rerun()
                         except Exception as e:
-                            st.error(f"Erreur Serveur. Le modèle {model.model_name} a échoué. Détail : {e}")
+                            st.error(f"Erreur Serveur : {e}")
         
         with b[1]:
             if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="b_at"):
@@ -169,6 +178,7 @@ if st.session_state.view == "📜 Scribe de Destinée":
 # 2. ATELIER
 elif st.session_state.view == "🎨 Atelier de Ninharsag":
     st.header("🎨 Atelier de Ninharsag")
+    
     with st.form("at_form"):
         v_at = st.text_area("Vision à matérialiser...", value=active_c["last_response"], height=150)
         c1, c2 = st.columns(2)
@@ -177,8 +187,38 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
             fmt = st.selectbox("Format", ["1:1", "4:3", "3:4", "16:9", "9:16"])
         with c2:
             sty = st.selectbox("Esthétique Maître", ["Photo-réel Brut (8k)", "Concept Art UE5", "Bas-relief Royal"])
-            if st.form_submit_button("🚀 Graver & Manifester"):
-                st.image(f"https://image.pollinations.ai/prompt/{v_at.replace(' ', '%20')}?nologo=true")
+            submitted = st.form_submit_button("🚀 Graver & Manifester")
+            
+    if submitted:
+        st.session_state.last_gen_url = f"https://image.pollinations.ai/prompt/{v_at.replace(' ', '%20')}?nologo=true"
+        try:
+            # Télécharge l'image en mémoire pour permettre le téléchargement par l'utilisateur
+            resp = requests.get(st.session_state.last_gen_url)
+            if resp.status_key == 200:
+                st.session_state.last_gen_bytes = resp.content
+        except:
+            st.session_state.last_gen_bytes = None
+
+    # Affichage de l'image et des boutons d'action
+    if st.session_state.last_gen_url:
+        st.image(st.session_state.last_gen_url, use_container_width=True)
+        
+        col_act1, col_act2 = st.columns(2)
+        with col_act1:
+            if st.button("📁 Stocker dans les Chroniques de Manifestation", use_container_width=True):
+                st.session_state.saved_images.append(st.session_state.last_gen_url)
+                st.success("L'image a été stockée dans la barre latérale !")
+        with col_act2:
+            if st.session_state.last_gen_bytes:
+                st.download_button(
+                    label="📥 Télécharger l'Image",
+                    data=st.session_state.last_gen_bytes,
+                    file_name="vision_ninharsag.png",
+                    mime="image/png",
+                    use_container_width=True
+                )
+            else:
+                st.caption("Faites un clic droit sur l'image pour la sauvegarder.")
 
 # 3. VISIONS
 elif st.session_state.view == "🎬 Visions de Veo 3":
