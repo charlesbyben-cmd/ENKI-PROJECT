@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.5 (Ultimate Synapse) ---
-st.set_page_config(page_title="ENKI v5.5 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.0 (Titanium Matrix) ---
+st.set_page_config(page_title="ENKI v6.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -24,6 +24,25 @@ def convert_to_jpeg(raw_bytes):
         return buf.getvalue()
     except Exception:
         return raw_bytes 
+
+# --- MOTEUR BLINDÉ (TITANIUM FALLBACK ANTI-404) ---
+# Cette fonction essaie les modèles un par un jusqu'à ce que l'un d'eux réponde
+def generate_content_with_fallback(prompt_parts):
+    models_to_try = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-pro-vision"
+    ]
+    last_error = None
+    for model_name in models_to_try:
+        try:
+            m = genai.GenerativeModel(model_name)
+            response = m.generate_content(prompt_parts)
+            return response, model_name
+        except Exception as e:
+            last_error = str(e)
+            continue
+    raise Exception(f"Rejet total des serveurs Google. Dernière erreur : {last_error}")
 
 # --- INITIALISATION DES SYSTÈMES ET DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
@@ -57,14 +76,6 @@ if "chronicles" not in st.session_state:
 if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
-
-# --- MOTEUR SAGE (NOM STRICT POUR ÉVITER LE 404) ---
-@st.cache_resource
-def get_sage_engine():
-    # Le suffixe "-latest" est vital pour contourner l'erreur 404 sur les serveurs Cloud
-    return genai.GenerativeModel("gemini-1.5-flash-latest")
-
-model = get_sage_engine()
 
 # --- SIDEBAR : ARCHIVES D'ABZU ---
 with st.sidebar:
@@ -119,7 +130,7 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AUTO-DESCRIPTION MAGIQUE)
+    # SCEAUX DE PERSISTANCE (AUTO-DESCRIPTION BLINDÉE)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -136,8 +147,10 @@ with st.sidebar:
                         imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         
-                        resp = model.generate_content(prompt_analyse)
+                        # UTILISATION DU MOTEUR BLINDÉ
+                        resp, used_model = generate_content_with_fallback(prompt_analyse)
                         st.session_state.v_d_input = resp.text
+                        st.success(f"Essence extraite par {used_model}")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Le flux a été interrompu : {e}")
@@ -156,7 +169,6 @@ with st.sidebar:
                     "url": st.session_state.v_url_input,
                     "active": True
                 })
-                # Nettoyage automatique des champs après gravure
                 st.session_state.v_n_input = ""
                 st.session_state.v_d_input = ""
                 st.session_state.v_url_input = ""
@@ -194,8 +206,8 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.5 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Gemini-1.5-Flash-Latest | Manifestation Réelle : ACTIVÉE")
+st.title("🏛️ ENKI v6.0 : The Visual Continuity Revolution")
+st.caption("🚀 Moteur Actif : Titanium Fallback | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -237,7 +249,8 @@ if st.session_state.view == "📜 Scribe de Destinée":
 
                     with st.spinner("Le Sage intègre les multiples visions..."):
                         try:
-                            resp = model.generate_content(prompt_parts)
+                            # UTILISATION DU MOTEUR BLINDÉ
+                            resp, used_model = generate_content_with_fallback(prompt_parts)
                             active_c["last_response"] = resp.text
                             active_c["messages"].append({"role": "assistant", "content": resp.text})
                         except Exception as e:
