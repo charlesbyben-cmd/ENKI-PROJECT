@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.2 (Omniscient Seal) ---
-st.set_page_config(page_title="ENKI v5.2 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v5.3 (Omniscient Seal & Anti-404) ---
+st.set_page_config(page_title="ENKI v5.3 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -56,10 +56,34 @@ if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE ---
+# --- MOTEUR SAGE (BOUCLIER ANTI-404) ---
 @st.cache_resource
 def get_sage_engine():
-    return genai.GenerativeModel("gemini-1.5-flash")
+    try:
+        # Le système scanne ta clé API pour voir les modèles autorisés
+        modeles_dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Ordre de préférence absolue pour la Vision
+        cibles = [
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-pro-latest",
+            "models/gemini-1.5-pro",
+            "models/gemini-pro-vision"
+        ]
+        
+        for cible in cibles:
+            if cible in modeles_dispos:
+                return genai.GenerativeModel(cible.replace("models/", ""))
+                
+        # Si aucun préféré n'est trouvé, on prend le premier modèle génératif disponible
+        if modeles_dispos:
+            return genai.GenerativeModel(modeles_dispos[0].replace("models/", ""))
+    except:
+        pass
+    
+    # Sécurité ultime par défaut
+    return genai.GenerativeModel("gemini-1.5-flash-latest")
 
 model = get_sage_engine()
 
@@ -128,15 +152,15 @@ with st.sidebar:
         # BOUTON MAGIQUE D'AUTO-DESCRIPTION
         if v_u:
             if st.button("👁️ Extraire l'Essence (Auto-Description)", use_container_width=True):
-                with st.spinner("Le Sage analyse la physionomie..."):
+                with st.spinner(f"Le Sage analyse la physionomie (Moteur : {model.model_name})..."):
                     try:
                         imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
-                        prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage. Sois direct, ne fais pas d'introduction."] + imgs_to_analyze
+                        prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         resp = model.generate_content(prompt_analyse)
                         st.session_state.seal_auto_desc = resp.text
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Erreur d'analyse : {e}")
+                        st.error(f"Erreur d'analyse (Vérifie ta connexion) : {e}")
         
         # La case de description liée à la mémoire (se remplit toute seule)
         v_d = st.text_area("2. Physique / Description", value=st.session_state.seal_auto_desc, height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
@@ -190,8 +214,8 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.2 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
+st.title("🏛️ ENKI v5.3 : The Visual Continuity Revolution")
+st.caption(f"🚀 Moteur Actif : Automatique | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -231,7 +255,7 @@ if st.session_state.view == "📜 Scribe de Destinée":
                         except Exception as e:
                             st.error(f"Erreur d'intégration de l'image : {e}")
 
-                    with st.spinner("Le Sage intègre les multiples visions..."):
+                    with st.spinner(f"Le Sage intègre les visions (Moteur : {model.model_name})..."):
                         try:
                             resp = model.generate_content(prompt_parts)
                             active_c["last_response"] = resp.text
