@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v4.6 (Visual Sovereignty) ---
-st.set_page_config(page_title="ENKI v4.6 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v4.7 (Sovereignty & Gallery Sync) ---
+st.set_page_config(page_title="ENKI v4.7 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -14,6 +14,16 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("❌ Clé API Google 'GEMINI_API_KEY' manquante dans les secrets.")
     st.stop()
+
+# --- FONCTION DIVINE : CONVERSION JPEG POUR GALERIE iPAD ---
+def convert_to_jpeg(raw_bytes):
+    try:
+        img = PIL.Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=95)
+        return buf.getvalue()
+    except Exception:
+        return raw_bytes # Secours si erreur
 
 # --- INITIALISATION DES SYSTÈMES ET DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
@@ -43,7 +53,7 @@ if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE (NOM FIXÉ POUR ÉVITER L'ERREUR 404 NOTFOUND) ---
+# --- MOTEUR SAGE ---
 @st.cache_resource
 def get_sage_engine():
     return genai.GenerativeModel("gemini-1.5-flash")
@@ -87,7 +97,13 @@ with st.sidebar:
                 st.caption(f"Manifesté à : {manifested['time']}")
                 if manifested['type'] == 'image':
                     st.image(manifested['data'], use_container_width=True)
-                    st.download_button(label="📥 Télécharger l'Image PNG", data=manifested['raw_bytes'], file_name=f"{manifested['id']}.png", mime="image/png", use_container_width=True, key=f"dl_arc_{manifested['id']}")
+                    # DOUBLE BOUTON DE TÉLÉCHARGEMENT (PNG + JPEG POUR GALERIE)
+                    dl_col1, dl_col2 = st.columns(2)
+                    with dl_col1:
+                        st.download_button(label="📥 PNG", data=manifested['raw_bytes'], file_name=f"{manifested['id']}.png", mime="image/png", use_container_width=True, key=f"dl_png_{manifested['id']}")
+                    with dl_col2:
+                        st.download_button(label="📸 JPEG", data=convert_to_jpeg(manifested['raw_bytes']), file_name=f"{manifested['id']}.jpg", mime="image/jpeg", use_container_width=True, key=f"dl_jpg_{manifested['id']}")
+                
                 elif manifested['type'] == 'video':
                     st.video(manifested['data'])
                     st.caption(f"Manifesté par {manifested['engine']}")
@@ -131,7 +147,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v4.0 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v4.7 : The Visual Continuity Revolution")
 st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -247,7 +263,12 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         st.caption("Manifestation Divine Réussie")
         st.image(st.session_state.last_gen_url, use_container_width=True)
         if st.session_state.last_gen_bytes:
-            st.download_button(label="📥 Télécharger la Manifestation PNG", data=st.session_state.last_gen_bytes, file_name="Manifestation.png", mime="image/png", use_container_width=True, key="dl_main_at")
+            # DOUBLE BOUTON POUR LA VUE PRINCIPALE
+            c_dl1, c_dl2 = st.columns(2)
+            with c_dl1:
+                st.download_button(label="📥 Télécharger en PNG", data=st.session_state.last_gen_bytes, file_name="Manifestation.png", mime="image/png", use_container_width=True, key="dl_main_png")
+            with c_dl2:
+                st.download_button(label="📸 Télécharger en JPEG (Galerie)", data=convert_to_jpeg(st.session_state.last_gen_bytes), file_name="Manifestation.jpg", mime="image/jpeg", use_container_width=True, key="dl_main_jpg")
 
 # 3. VISIONS
 elif st.session_state.view == "🎬 Visions de Veo 3":
