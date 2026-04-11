@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.4 (Perfect Synapse) ---
-st.set_page_config(page_title="ENKI v5.4 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v5.5 (Ultimate Synapse) ---
+st.set_page_config(page_title="ENKI v5.5 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -31,7 +31,7 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
-# NOUVEAU : Initialisation stricte des champs du Sceau pour la mise à jour dynamique
+# Initialisation stricte des champs du Sceau
 if "v_n_input" not in st.session_state: st.session_state.v_n_input = ""
 if "v_d_input" not in st.session_state: st.session_state.v_d_input = ""
 if "v_url_input" not in st.session_state: st.session_state.v_url_input = ""
@@ -58,23 +58,11 @@ if "active_idx" not in st.session_state: st.session_state.active_idx = 0
 
 active_c = st.session_state.chronicles[st.session_state.active_idx]
 
-# --- MOTEUR SAGE (SÉCURISÉ) ---
+# --- MOTEUR SAGE (NOM STRICT POUR ÉVITER LE 404) ---
 @st.cache_resource
 def get_sage_engine():
-    try:
-        modeles_dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # On force les modèles 1.5 stables et on ignore les expériementaux (2.5)
-        cibles = [
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-flash-latest",
-            "models/gemini-1.5-pro"
-        ]
-        for cible in cibles:
-            if cible in modeles_dispos:
-                return genai.GenerativeModel(cible.replace("models/", ""))
-    except:
-        pass
-    return genai.GenerativeModel("gemini-1.5-flash")
+    # Le suffixe "-latest" est vital pour contourner l'erreur 404 sur les serveurs Cloud
+    return genai.GenerativeModel("gemini-1.5-flash-latest")
 
 model = get_sage_engine()
 
@@ -131,12 +119,11 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AVEC AUTO-DESCRIPTION MAGIQUE)
+    # SCEAUX DE PERSISTANCE (AUTO-DESCRIPTION MAGIQUE)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
-        # Utilisation stricte des clés de session
         st.text_input("Nom de l'élément (Ex: Ea)", key="v_n_input")
         
         v_u = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u_file")
@@ -148,20 +135,14 @@ with st.sidebar:
                     try:
                         imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
-                        resp = model.generate_content(prompt_analyse)
                         
-                        # Injection forcée dans la case de texte
-                        try:
-                            st.session_state.v_d_input = resp.text
-                        except ValueError:
-                            st.session_state.v_d_input = "L'analyse a été bloquée par le filtre de sécurité de l'IA (visage réel détecté). Décrivez le personnage manuellement."
+                        resp = model.generate_content(prompt_analyse)
+                        st.session_state.v_d_input = resp.text
                         st.rerun()
                     except Exception as e:
                         st.error(f"Le flux a été interrompu : {e}")
         
-        # Case de description (Reliée directement à l'extraction)
         st.text_area("2. Physique / Description", height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
-        
         st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
         
         if st.button("3. Graver le Sceau", type="primary"):
@@ -175,7 +156,7 @@ with st.sidebar:
                     "url": st.session_state.v_url_input,
                     "active": True
                 })
-                # Nettoyage automatique des champs après gravure !
+                # Nettoyage automatique des champs après gravure
                 st.session_state.v_n_input = ""
                 st.session_state.v_d_input = ""
                 st.session_state.v_url_input = ""
@@ -213,8 +194,8 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.4 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
+st.title("🏛️ ENKI v5.5 : The Visual Continuity Revolution")
+st.caption("🚀 Moteur Actif : Gemini-1.5-Flash-Latest | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -297,7 +278,6 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
             with st.spinner("La vision se matérialise..."):
                 if moteur_input == "Nano Banana 2":
                     
-                    # --- LE PONT NEURAL EST ICI ---
                     prompt_complet = vision_input
                     if active_ctx.strip():
                         prompt_complet += f". Consignes visuelles obligatoires : {active_ctx}"
