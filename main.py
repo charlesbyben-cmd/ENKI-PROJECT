@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v4.7 (Sovereignty & Gallery Sync) ---
-st.set_page_config(page_title="ENKI v4.7 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v4.8 (Sovereignty & Vision Fix) ---
+st.set_page_config(page_title="ENKI v4.8 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -23,7 +23,7 @@ def convert_to_jpeg(raw_bytes):
         img.save(buf, format="JPEG", quality=95)
         return buf.getvalue()
     except Exception:
-        return raw_bytes # Secours si erreur
+        return raw_bytes 
 
 # --- INITIALISATION DES SYSTÈMES ET DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
@@ -31,7 +31,7 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
-# Stockage Images/Vidéos (Conservation across tabs)
+# Stockage Images/Vidéos 
 if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
 if "last_gen_url" not in st.session_state: st.session_state.last_gen_url = ""
 if "saved_images" not in st.session_state: st.session_state.saved_images = []
@@ -43,7 +43,7 @@ if "manifested_archives" not in st.session_state: st.session_state.manifested_ar
 if "trigger_atelier_regeneration" not in st.session_state: st.session_state.trigger_atelier_regeneration = False
 
 def on_aesthetic_change():
-    if st.session_state.get('in_at_prompt'): # Ne déclenche pas si la zone de texte est vide
+    if st.session_state.get('in_at_prompt'): 
         st.session_state.trigger_atelier_regeneration = True
 
 # --- INITIALISATION MULTI-PROJET ---
@@ -68,7 +68,7 @@ with st.sidebar:
     
     st.divider()
     
-    # GESTION DES CHRONIQUES (PROJETS MULTIPLES)
+    # GESTION DES CHRONIQUES
     st.subheader("📜 Tablettes de Destinée")
     if st.button("➕ Nouvelle Chronique", use_container_width=True, key="new_ch"):
         st.session_state.chronicles.append({"name": f"✨ Tablette {len(st.session_state.chronicles)+1}", "messages": [], "last_response": ""})
@@ -86,24 +86,22 @@ with st.sidebar:
 
     st.divider()
 
-    # --- ARCHIVES AUTOMATIQUES "MES CONTENUS" (TOUJOURS VISIBLE) ---
+    # --- ARCHIVES AUTOMATIQUES "MES CONTENUS" ---
     st.subheader("📚 Chroniques Manifestées")
     
     if st.session_state.manifested_archives:
         st.caption("Conservation automatique de tes contenus de l'Atelier et de Sora.")
-        # Inversion de la liste pour voir les plus récents en haut
         for i, manifested in enumerate(reversed(st.session_state.manifested_archives)):
             with st.expander(f"{manifested['id']} - {manifested['prompt'][:30]}...", expanded=(i == 0)):
                 st.caption(f"Manifesté à : {manifested['time']}")
                 if manifested['type'] == 'image':
                     st.image(manifested['data'], use_container_width=True)
-                    # DOUBLE BOUTON DE TÉLÉCHARGEMENT (PNG + JPEG POUR GALERIE)
+                    # DOUBLE BOUTON DE TÉLÉCHARGEMENT (PNG + JPEG)
                     dl_col1, dl_col2 = st.columns(2)
                     with dl_col1:
                         st.download_button(label="📥 PNG", data=manifested['raw_bytes'], file_name=f"{manifested['id']}.png", mime="image/png", use_container_width=True, key=f"dl_png_{manifested['id']}")
                     with dl_col2:
                         st.download_button(label="📸 JPEG", data=convert_to_jpeg(manifested['raw_bytes']), file_name=f"{manifested['id']}.jpg", mime="image/jpeg", use_container_width=True, key=f"dl_jpg_{manifested['id']}")
-                
                 elif manifested['type'] == 'video':
                     st.video(manifested['data'])
                     st.caption(f"Manifesté par {manifested['engine']}")
@@ -147,7 +145,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v4.7 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v4.8 : The Visual Continuity Revolution")
 st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -178,12 +176,14 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     active_c["messages"].append({"role": "user", "content": user_input if user_input else "Analyse du document."})
                     
                     prompt_parts = [f"Tu es le Sage. Contexte de continuité : {active_ctx}\n\n{user_input}"]
+                    
+                    # LA CORRECTION EST ICI : ENVOI BRUT DES DONNÉES (BYPASS PIL.Image)
                     if up_file:
-                        if up_file.type.startswith("image/"):
-                            img = PIL.Image.open(up_file)
-                            prompt_parts.append(img)
-                        else:
-                            prompt_parts.append({"mime_type": up_file.type, "data": up_file.read()})
+                        try:
+                            # Utilisation stricte de getvalue() pour l'iPad
+                            prompt_parts.append({"mime_type": up_file.type, "data": up_file.getvalue()})
+                        except Exception as e:
+                            st.error(f"Erreur d'intégration de l'image : {e}")
 
                     with st.spinner("Le Sage scrute les tablettes..."):
                         try:
@@ -223,7 +223,7 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
 
     at_manual_submit = st.button("🚀 Graver & Manifester", use_container_width=True)
 
-    # LOGIQUE DE GÉNÉRATION (Bouton ou Changement Dynamique)
+    # LOGIQUE DE GÉNÉRATION
     if at_manual_submit or st.session_state.get("trigger_atelier_regeneration", False):
         st.session_state.trigger_atelier_regeneration = False
 
@@ -255,7 +255,7 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
                     except Exception as e:
                         st.error(f"Interruption divine : {e}")
                 else:
-                    st.warning(f"{moteur_input} n'est pas encore synchronisé pour le recalcul instantané.")
+                    st.warning(f"{moteur_input} n'est pas encore synchronisé.")
         else:
             st.warning("Inscrivez une vision pour la manifester.")
 
@@ -285,7 +285,6 @@ elif st.session_state.view == "🎬 Visions de Veo 3":
             
         if st.form_submit_button("🎬 Synchroniser la Vision"):
             with st.spinner("Synchronisation des lignes de temps Veo 3..."):
-                # ARCHIVAGE AUTOMATIQUE VIDÉO
                 vid_url = "https://www.w3schools.com/html/mov_bbb.mp4"
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 id_vid = f"VID-{moteur_v.replace(' ', '')}-{datetime.now().strftime('%H%M%S')}"
