@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.0 (Visual Continuity Revolution) ---
-st.set_page_config(page_title="ENKI v5.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v5.2 (Omniscient Seal) ---
+st.set_page_config(page_title="ENKI v5.2 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -31,6 +31,9 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
+# Variable pour l'auto-description des Sceaux
+if "seal_auto_desc" not in st.session_state: st.session_state.seal_auto_desc = ""
+
 # Stockage Images/Vidéos 
 if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
 if "last_gen_url" not in st.session_state: st.session_state.last_gen_url = ""
@@ -39,7 +42,7 @@ if "saved_images" not in st.session_state: st.session_state.saved_images = []
 # --- CHRONIQUES MANIFESTÉES AUTOMATIQUES (ARCHIVES) ---
 if "manifested_archives" not in st.session_state: st.session_state.manifested_archives = []
 
-# --- CALLBACK POUR RECALCUL DYNAMIQUE (CHANGEMENT D'ESTHÉTIQUE) ---
+# --- CALLBACK POUR RECALCUL DYNAMIQUE ---
 if "trigger_atelier_regeneration" not in st.session_state: st.session_state.trigger_atelier_regeneration = False
 
 def on_aesthetic_change():
@@ -96,7 +99,6 @@ with st.sidebar:
                 st.caption(f"Manifesté à : {manifested['time']}")
                 if manifested['type'] == 'image':
                     st.image(manifested['data'], use_container_width=True)
-                    # DOUBLE BOUTON DE TÉLÉCHARGEMENT (PNG + JPEG)
                     dl_col1, dl_col2 = st.columns(2)
                     with dl_col1:
                         st.download_button(label="📥 PNG", data=manifested['raw_bytes'], file_name=f"{manifested['id']}.png", mime="image/png", use_container_width=True, key=f"dl_png_{manifested['id']}")
@@ -114,19 +116,34 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (MULTI-IMAGES)
+    # SCEAUX DE PERSISTANCE (AVEC AUTO-DESCRIPTION OMNISCIENTE)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
-        v_n = st.text_input("Nom de l'élément", key="v_n")
-        v_d = st.text_area("Physique / Description (Optionnel)", key="v_d")
+        v_n = st.text_input("Nom de l'élément (Ex: Ea)", key="v_n_input")
         
-        # Le paramètre accept_multiple_files=True permet de charger toute la galerie
-        v_u = st.file_uploader("Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u")
-        v_url = st.text_input("Ou URL de l'image (Lien direct)", key="v_url")
+        v_u = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u_input")
         
-        if st.button("Graver le Sceau", key="v_b"):
+        # BOUTON MAGIQUE D'AUTO-DESCRIPTION
+        if v_u:
+            if st.button("👁️ Extraire l'Essence (Auto-Description)", use_container_width=True):
+                with st.spinner("Le Sage analyse la physionomie..."):
+                    try:
+                        imgs_to_analyze = [PIL.Image.open(io.BytesIO(f.getvalue())) for f in v_u]
+                        prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage. Sois direct, ne fais pas d'introduction."] + imgs_to_analyze
+                        resp = model.generate_content(prompt_analyse)
+                        st.session_state.seal_auto_desc = resp.text
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur d'analyse : {e}")
+        
+        # La case de description liée à la mémoire (se remplit toute seule)
+        v_d = st.text_area("2. Physique / Description", value=st.session_state.seal_auto_desc, height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
+        
+        v_url = st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
+        
+        if st.button("3. Graver le Sceau", key="v_b_input", type="primary"):
             if v_n: 
                 saved_refs = [f.getvalue() for f in v_u] if v_u else []
                 
@@ -137,9 +154,11 @@ with st.sidebar:
                     "url": v_url,
                     "active": True
                 })
+                # On nettoie la case magique pour le prochain sceau
+                st.session_state.seal_auto_desc = ""
                 st.rerun()
             else:
-                st.warning("Le nom de l'élément est obligatoire pour graver le sceau.")
+                st.warning("Le nom de l'élément est obligatoire.")
 
     active_ctx = ""
     active_seal_images = [] 
@@ -147,7 +166,8 @@ with st.sidebar:
     for i, seal in enumerate(st.session_state.vault):
         seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_{i}")
         if seal["active"]:
-            active_ctx += f" [{seal['name']}: {seal.get('desc', '')}]"
+            if seal.get('desc'):
+                active_ctx += f" [Personnage/Objet '{seal['name']}': {seal['desc']}]"
             
             if seal.get('refs'):
                 cols = st.columns(min(len(seal['refs']), 4)) 
@@ -170,7 +190,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.0 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v5.2 : The Visual Continuity Revolution")
 st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -200,7 +220,6 @@ if st.session_state.view == "📜 Scribe de Destinée":
                 if user_input or up_file:
                     active_c["messages"].append({"role": "user", "content": user_input if user_input else "Analyse du document."})
                     
-                    # INJECTION TOTALE : Texte + Images de la conversation + Images des Sceaux
                     prompt_parts = [f"Tu es le Sage. Contexte de continuité : {active_ctx}\nVoici les références visuelles verrouillées à garder en mémoire :\n"]
                     prompt_parts.extend(active_seal_images)
                     prompt_parts.append(f"\nDirective du Souverain : {user_input}")
@@ -254,7 +273,13 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         if vision_input:
             with st.spinner("La vision se matérialise..."):
                 if moteur_input == "Nano Banana 2":
-                    encoded_prompt = vision_input.replace(" ", "%20").replace("\n", "%20")
+                    
+                    # --- LE PONT NEURAL EST ICI ---
+                    prompt_complet = vision_input
+                    if active_ctx.strip():
+                        prompt_complet += f". Consignes visuelles obligatoires : {active_ctx}"
+                        
+                    encoded_prompt = prompt_complet.replace(" ", "%20").replace("\n", "%20")
                     url = f"https://image.pollinations.ai/prompt/{encoded_prompt}%20aesthetic%20{style_input}%20{format_img_input}?nologo=true&enhance=true"
                     
                     try:
