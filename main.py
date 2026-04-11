@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v4.8 (Sovereignty & Vision Fix) ---
-st.set_page_config(page_title="ENKI v4.8 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v5.0 (Persistence Matrix) ---
+st.set_page_config(page_title="ENKI v5.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -114,30 +114,58 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE
+    # SCEAUX DE PERSISTANCE (NOUVEAU : MULTI-IMAGES)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
         v_n = st.text_input("Nom de l'élément", key="v_n")
-        v_d = st.text_area("Physique / Description", key="v_d")
-        v_u = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"], key="v_u")
+        v_d = st.text_area("Physique / Description (Optionnel)", key="v_d")
+        
+        # Le paramètre accept_multiple_files=True permet de charger toute la galerie
+        v_u = st.file_uploader("Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u")
         v_url = st.text_input("Ou URL de l'image (Lien direct)", key="v_url")
+        
         if st.button("Graver le Sceau", key="v_b"):
-            if v_n and v_d:
-                st.session_state.vault.append({"name": v_n, "desc": v_d, "ref": v_u if v_u else v_url, "active": True})
+            if v_n: # Désormais seul le nom est obligatoire
+                # On sauvegarde les données brutes de CHAQUE image sélectionnée
+                saved_refs = [f.getvalue() for f in v_u] if v_u else []
+                
+                st.session_state.vault.append({
+                    "name": v_n, 
+                    "desc": v_d, 
+                    "refs": saved_refs, 
+                    "url": v_url,
+                    "active": True
+                })
                 st.rerun()
+            else:
+                st.warning("Le nom de l'élément est obligatoire pour graver le sceau.")
 
     active_ctx = ""
+    active_seal_images = [] # Liste pour nourrir le Sage avec les images
+    
     for i, seal in enumerate(st.session_state.vault):
         seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_{i}")
         if seal["active"]:
-            active_ctx += f" [{seal['name']}: {seal['desc']}]"
-            if seal['ref']:
+            active_ctx += f" [{seal['name']}: {seal.get('desc', '')}]"
+            
+            # Affichage des miniatures (Mosaïque si plusieurs images)
+            if seal.get('refs'):
+                cols = st.columns(min(len(seal['refs']), 4)) # 4 colonnes max pour l'esthétique
+                for idx, img_bytes in enumerate(seal['refs']):
+                    cols[idx % 4].image(img_bytes)
+                    # On prépare l'image pour l'analyse du Sage
+                    try:
+                        active_seal_images.append(PIL.Image.open(io.BytesIO(img_bytes)))
+                    except:
+                        pass
+                        
+            if seal.get('url'):
                 try:
-                    if isinstance(seal['ref'], str) and "http" in seal['ref']: st.image(seal['ref'], width=100)
-                    else: st.image(seal['ref'], width=100)
-                except: st.caption("🔗 Sceau actif")
+                    st.image(seal['url'], width=100)
+                except:
+                    st.caption("🔗 URL Sceau active")
 
     st.divider()
     if st.button("🧹 Effacer les Tablettes (Reset System)", use_container_width=True, key="res_sys"):
@@ -145,7 +173,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v4.8 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v5.0 : The Persistence Matrix")
 st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -175,17 +203,19 @@ if st.session_state.view == "📜 Scribe de Destinée":
                 if user_input or up_file:
                     active_c["messages"].append({"role": "user", "content": user_input if user_input else "Analyse du document."})
                     
-                    prompt_parts = [f"Tu es le Sage. Contexte de continuité : {active_ctx}\n\n{user_input}"]
+                    # INJECTION TOTALE : Texte + Images de la conversation + Images des Sceaux
+                    prompt_parts = [f"Tu es le Sage. Contexte de continuité : {active_ctx}\nVoici les références visuelles verrouillées à garder en mémoire :\n"]
+                    prompt_parts.extend(active_seal_images)
+                    prompt_parts.append(f"\nDirective du Souverain : {user_input}")
                     
-                    # LA CORRECTION EST ICI : ENVOI BRUT DES DONNÉES (BYPASS PIL.Image)
                     if up_file:
                         try:
-                            # Utilisation stricte de getvalue() pour l'iPad
-                            prompt_parts.append({"mime_type": up_file.type, "data": up_file.getvalue()})
+                            img = PIL.Image.open(up_file)
+                            prompt_parts.append(img)
                         except Exception as e:
                             st.error(f"Erreur d'intégration de l'image : {e}")
 
-                    with st.spinner("Le Sage scrute les tablettes..."):
+                    with st.spinner("Le Sage intègre les multiples visions..."):
                         try:
                             resp = model.generate_content(prompt_parts)
                             active_c["last_response"] = resp.text
@@ -208,7 +238,6 @@ if st.session_state.view == "📜 Scribe de Destinée":
 elif st.session_state.view == "🎨 Atelier de Ninharsag":
     st.header("🎨 Atelier de Ninharsag")
     
-    # NOUVELLES ESTHÉTIQUES
     esthetiques_uniques = ["Photo-réel Brut (8k Leica)", "Concept Art UE5", "Chroniques de Dilmun (Manga Ultra-Fidélité)", "Sourire de Babylone (Pixar Haute Fidélité)", "Bas-relief Royal"]
     
     col_a1, col_a2 = st.columns(2)
@@ -218,12 +247,10 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         moteur_input = st.selectbox("Moteur de Manifestation", ["Nano Banana 2", "DALL-E 3", "Midjourney v7", "Imagen 3"], key="in_at_motor")
     with col_a2:
         qualite_input = st.select_slider("Qualité Rendu", options=["720p", "1080p", "2K", "4K", "8K"], key="in_at_qual")
-        # CHANGEMENT DYNAMIQUE D'ESTHÉTIQUE
         style_input = st.selectbox("Esthétique Maître", esthetiques_uniques, key="in_at_aesthetic", on_change=on_aesthetic_change)
 
     at_manual_submit = st.button("🚀 Graver & Manifester", use_container_width=True)
 
-    # LOGIQUE DE GÉNÉRATION
     if at_manual_submit or st.session_state.get("trigger_atelier_regeneration", False):
         st.session_state.trigger_atelier_regeneration = False
 
@@ -239,7 +266,6 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
                             st.session_state.last_gen_bytes = response.content
                             st.session_state.last_gen_url = url
                             
-                            # ARCHIVAGE AUTOMATIQUE
                             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             id_manifest = f"IMG-{moteur_input.replace(' ', '')}-{datetime.now().strftime('%H%M%S')}"
                             st.session_state.manifested_archives.append({
@@ -263,7 +289,6 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         st.caption("Manifestation Divine Réussie")
         st.image(st.session_state.last_gen_url, use_container_width=True)
         if st.session_state.last_gen_bytes:
-            # DOUBLE BOUTON POUR LA VUE PRINCIPALE
             c_dl1, c_dl2 = st.columns(2)
             with c_dl1:
                 st.download_button(label="📥 Télécharger en PNG", data=st.session_state.last_gen_bytes, file_name="Manifestation.png", mime="image/png", use_container_width=True, key="dl_main_png")
