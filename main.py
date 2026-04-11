@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v6.1 (Lightweaver Matrix - Anti-Freeze) ---
-st.set_page_config(page_title="ENKI v6.1 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.2 (The Oracle's Clarity) ---
+st.set_page_config(page_title="ENKI v6.2 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -25,36 +25,34 @@ def convert_to_jpeg(raw_bytes):
     except Exception:
         return raw_bytes 
 
-# --- FONCTION DIVINE 2 : OPTIMISATION DES IMAGES POUR LE SAGE (ANTI-FREEZE) ---
-def optimize_for_sage(raw_bytes):
+# --- FONCTION DIVINE 2 : PRÉPARATION SÉCURISÉE DES IMAGES (ANTI-CRASH) ---
+# Envoie les images sous forme de dictionnaire natif, 100% compatible avec Gemini
+def prepare_image_for_gemini(raw_bytes):
     try:
         img = PIL.Image.open(io.BytesIO(raw_bytes)).convert("RGB")
-        # Réduit l'image à une taille digeste pour l'API sans perdre le visage
-        img.thumbnail((1024, 1024)) 
+        img.thumbnail((1024, 1024)) # Optimisation du poids
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
-        return PIL.Image.open(buf)
-    except Exception as e:
-        # En cas d'erreur, on essaie de renvoyer l'image brute (risque de freeze)
-        return PIL.Image.open(io.BytesIO(raw_bytes))
+        return {"mime_type": "image/jpeg", "data": buf.getvalue()}
+    except Exception:
+        return {"mime_type": "image/jpeg", "data": raw_bytes}
 
-# --- MOTEUR BLINDÉ (TITANIUM FALLBACK ANTI-404) ---
-def generate_content_with_fallback(prompt_parts):
-    models_to_try = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-pro-vision"
-    ]
-    last_error = None
-    for model_name in models_to_try:
-        try:
-            m = genai.GenerativeModel(model_name)
-            response = m.generate_content(prompt_parts)
-            return response, model_name
-        except Exception as e:
-            last_error = str(e)
-            continue
-    raise Exception(f"Rejet total des serveurs Google. Erreur : {last_error}")
+# --- SÉLECTION DYNAMIQUE DU MODÈLE (SCAN DE TA CLÉ API) ---
+@st.cache_resource
+def get_best_model_name():
+    try:
+        dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        for pref in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro"]:
+            if pref in dispos:
+                return pref.replace("models/", "")
+        if dispos:
+            return dispos[0].replace("models/", "")
+    except:
+        pass
+    return "gemini-1.5-flash"
+
+nom_modele_actif = get_best_model_name()
+model = genai.GenerativeModel(nom_modele_actif)
 
 # --- INITIALISATION DES SYSTÈMES ET DE LA MÉMOIRE ---
 if "vault" not in st.session_state: st.session_state.vault = []
@@ -142,7 +140,7 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (AVEC OPTIMISATION ANTI-FREEZE)
+    # SCEAUX DE PERSISTANCE
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -154,18 +152,18 @@ with st.sidebar:
         # BOUTON MAGIQUE D'AUTO-DESCRIPTION
         if v_u:
             if st.button("👁️ Extraire l'Essence", use_container_width=True):
-                with st.spinner("Le Sage compresse et analyse tes visions..."):
+                with st.spinner(f"Analyse par l'Oracle ({nom_modele_actif})..."):
                     try:
-                        # On utilise le compresseur avant d'envoyer au Sage !
-                        imgs_to_analyze = [optimize_for_sage(f.getvalue()) for f in v_u]
+                        # Conversion sécurisée en dictionnaire de bytes !
+                        imgs_to_analyze = [prepare_image_for_gemini(f.getvalue()) for f in v_u]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         
-                        resp, used_model = generate_content_with_fallback(prompt_analyse)
+                        resp = model.generate_content(prompt_analyse)
                         st.session_state.v_d_input = resp.text
                         st.success("Essence extraite avec succès !")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Le flux a été interrompu : {e}")
+                        st.error(f"Détail de l'erreur API : {e}")
         
         st.text_area("2. Physique / Description", height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
         st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
@@ -202,8 +200,7 @@ with st.sidebar:
                 for idx, img_bytes in enumerate(seal['refs']):
                     cols[idx % 4].image(img_bytes)
                     try:
-                        # On compresse aussi les images du Sceau pour les questions futures au Scribe !
-                        active_seal_images.append(optimize_for_sage(img_bytes))
+                        active_seal_images.append(prepare_image_for_gemini(img_bytes))
                     except:
                         pass
                         
@@ -219,8 +216,8 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v6.1 : The Visual Continuity Revolution")
-st.caption("🚀 Moteur Actif : Titanium Fallback | Manifestation Réelle : ACTIVÉE")
+st.title("🏛️ ENKI v6.2 : The Visual Continuity Revolution")
+st.caption(f"🚀 Moteur Actif : {nom_modele_actif} | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
@@ -255,15 +252,14 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     
                     if up_file:
                         try:
-                            # Compression auto pour le Scribe aussi !
-                            img = optimize_for_sage(up_file.getvalue())
+                            img = prepare_image_for_gemini(up_file.getvalue())
                             prompt_parts.append(img)
                         except Exception as e:
                             st.error(f"Erreur d'intégration de l'image : {e}")
 
                     with st.spinner("Le Sage intègre les multiples visions..."):
                         try:
-                            resp, used_model = generate_content_with_fallback(prompt_parts)
+                            resp = model.generate_content(prompt_parts)
                             active_c["last_response"] = resp.text
                             active_c["messages"].append({"role": "assistant", "content": resp.text})
                         except Exception as e:
