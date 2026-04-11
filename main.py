@@ -5,7 +5,7 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v5.0 (Persistence Matrix) ---
+# --- CONFIGURATION STRICTE v5.0 (Visual Continuity Revolution) ---
 st.set_page_config(page_title="ENKI v5.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
@@ -114,7 +114,7 @@ with st.sidebar:
         
     st.divider()
     
-    # SCEAUX DE PERSISTANCE (NOUVEAU : MULTI-IMAGES)
+    # SCEAUX DE PERSISTANCE (MULTI-IMAGES)
     st.subheader("📌 Sceaux de Persistance")
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
@@ -127,8 +127,7 @@ with st.sidebar:
         v_url = st.text_input("Ou URL de l'image (Lien direct)", key="v_url")
         
         if st.button("Graver le Sceau", key="v_b"):
-            if v_n: # Désormais seul le nom est obligatoire
-                # On sauvegarde les données brutes de CHAQUE image sélectionnée
+            if v_n: 
                 saved_refs = [f.getvalue() for f in v_u] if v_u else []
                 
                 st.session_state.vault.append({
@@ -143,19 +142,17 @@ with st.sidebar:
                 st.warning("Le nom de l'élément est obligatoire pour graver le sceau.")
 
     active_ctx = ""
-    active_seal_images = [] # Liste pour nourrir le Sage avec les images
+    active_seal_images = [] 
     
     for i, seal in enumerate(st.session_state.vault):
         seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_{i}")
         if seal["active"]:
             active_ctx += f" [{seal['name']}: {seal.get('desc', '')}]"
             
-            # Affichage des miniatures (Mosaïque si plusieurs images)
             if seal.get('refs'):
-                cols = st.columns(min(len(seal['refs']), 4)) # 4 colonnes max pour l'esthétique
+                cols = st.columns(min(len(seal['refs']), 4)) 
                 for idx, img_bytes in enumerate(seal['refs']):
                     cols[idx % 4].image(img_bytes)
-                    # On prépare l'image pour l'analyse du Sage
                     try:
                         active_seal_images.append(PIL.Image.open(io.BytesIO(img_bytes)))
                     except:
@@ -173,7 +170,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v5.0 : The Persistence Matrix")
+st.title("🏛️ ENKI v5.0 : The Visual Continuity Revolution")
 st.caption("🚀 Moteur Actif : Gemini-1.5-Flash | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
