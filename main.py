@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v6.2 (The Oracle's Clarity) ---
-st.set_page_config(page_title="ENKI v6.2 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.3 (Flawless Matrix) ---
+st.set_page_config(page_title="ENKI v6.3 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -25,19 +25,18 @@ def convert_to_jpeg(raw_bytes):
     except Exception:
         return raw_bytes 
 
-# --- FONCTION DIVINE 2 : PRÉPARATION SÉCURISÉE DES IMAGES (ANTI-CRASH) ---
-# Envoie les images sous forme de dictionnaire natif, 100% compatible avec Gemini
+# --- FONCTION DIVINE 2 : PRÉPARATION SÉCURISÉE DES IMAGES ---
 def prepare_image_for_gemini(raw_bytes):
     try:
         img = PIL.Image.open(io.BytesIO(raw_bytes)).convert("RGB")
-        img.thumbnail((1024, 1024)) # Optimisation du poids
+        img.thumbnail((1024, 1024))
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
         return {"mime_type": "image/jpeg", "data": buf.getvalue()}
     except Exception:
         return {"mime_type": "image/jpeg", "data": raw_bytes}
 
-# --- SÉLECTION DYNAMIQUE DU MODÈLE (SCAN DE TA CLÉ API) ---
+# --- SÉLECTION DYNAMIQUE DU MODÈLE ---
 @st.cache_resource
 def get_best_model_name():
     try:
@@ -60,10 +59,9 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
-# Initialisation stricte des champs du Sceau
-if "v_n_input" not in st.session_state: st.session_state.v_n_input = ""
-if "v_d_input" not in st.session_state: st.session_state.v_d_input = ""
-if "v_url_input" not in st.session_state: st.session_state.v_url_input = ""
+# --- SYSTÈME DE RÉINITIALISATION SÉCURISÉ (FIX STREAMLIT EXCEPTION) ---
+if "seal_reset_key" not in st.session_state: st.session_state.seal_reset_key = 0
+if "seal_auto_desc" not in st.session_state: st.session_state.seal_auto_desc = ""
 
 # Stockage Images/Vidéos 
 if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
@@ -145,43 +143,44 @@ with st.sidebar:
     st.caption("Verrouillez les éléments pour garantir la continuité visuelle.")
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
-        st.text_input("Nom de l'élément (Ex: Ea)", key="v_n_input")
         
-        v_u = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="v_u_file")
+        # Utilisation de la clé de reset pour contourner l'Exception de Streamlit
+        k = st.session_state.seal_reset_key
         
-        # BOUTON MAGIQUE D'AUTO-DESCRIPTION
-        if v_u:
+        nom_sceau = st.text_input("Nom de l'élément (Ex: Ea)", key=f"v_n_{k}")
+        upload_sceau = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=f"v_u_{k}")
+        
+        if upload_sceau:
             if st.button("👁️ Extraire l'Essence", use_container_width=True):
-                with st.spinner(f"Analyse par l'Oracle ({nom_modele_actif})..."):
+                with st.spinner("Extraction de l'essence divine en cours..."):
                     try:
-                        # Conversion sécurisée en dictionnaire de bytes !
-                        imgs_to_analyze = [prepare_image_for_gemini(f.getvalue()) for f in v_u]
+                        imgs_to_analyze = [prepare_image_for_gemini(f.getvalue()) for f in upload_sceau]
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         
                         resp = model.generate_content(prompt_analyse)
-                        st.session_state.v_d_input = resp.text
-                        st.success("Essence extraite avec succès !")
+                        st.session_state.seal_auto_desc = resp.text
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Détail de l'erreur API : {e}")
+                        st.error(f"Erreur d'extraction : {e}")
         
-        st.text_area("2. Physique / Description", height=150, key="v_d_input", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
-        st.text_input("Ou URL de l'image (Lien direct)", key="v_url_input")
+        desc_sceau = st.text_area("2. Physique / Description", value=st.session_state.seal_auto_desc, height=150, key=f"v_d_{k}", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
+        url_sceau = st.text_input("Ou URL de l'image (Lien direct)", key=f"v_url_{k}")
         
         if st.button("3. Graver le Sceau", type="primary"):
-            if st.session_state.v_n_input: 
-                saved_refs = [f.getvalue() for f in v_u] if v_u else []
+            if nom_sceau: 
+                saved_refs = [f.getvalue() for f in upload_sceau] if upload_sceau else []
                 
                 st.session_state.vault.append({
-                    "name": st.session_state.v_n_input, 
-                    "desc": st.session_state.v_d_input, 
+                    "name": nom_sceau, 
+                    "desc": desc_sceau, 
                     "refs": saved_refs, 
-                    "url": st.session_state.v_url_input,
+                    "url": url_sceau,
                     "active": True
                 })
-                st.session_state.v_n_input = ""
-                st.session_state.v_d_input = ""
-                st.session_state.v_url_input = ""
+                
+                # Le nettoyage parfait : on change l'identité des cases pour les vider
+                st.session_state.seal_reset_key += 1
+                st.session_state.seal_auto_desc = ""
                 st.rerun()
             else:
                 st.warning("Le nom de l'élément est obligatoire.")
@@ -190,7 +189,7 @@ with st.sidebar:
     active_seal_images = [] 
     
     for i, seal in enumerate(st.session_state.vault):
-        seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_{i}")
+        seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_main_{i}")
         if seal["active"]:
             if seal.get('desc'):
                 active_ctx += f" [Personnage/Objet '{seal['name']}': {seal['desc']}]"
@@ -211,19 +210,19 @@ with st.sidebar:
                     st.caption("🔗 URL Sceau active")
 
     st.divider()
-    if st.button("🧹 Effacer les Tablettes (Reset System)", use_container_width=True, key="res_sys"):
+    if st.button("🧹 Effacer les Tablettes (Reset System)", use_container_width=True, key="res_sys_main"):
         st.session_state.clear()
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v6.2 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v6.3 : The Visual Continuity Revolution")
 st.caption(f"🚀 Moteur Actif : {nom_modele_actif} | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
 nav = st.columns(4)
 tabs_titles = ["📜 Scribe de Destinée", "🎨 Atelier de Ninharsag", "🎬 Visions de Veo 3", "🎼 Fréquences de Lyria"]
 for i, title in enumerate(tabs_titles):
-    if nav[i].button(title, use_container_width=True, type="primary" if st.session_state.view == title else "secondary", key=f"tab_btn_{i}"):
+    if nav[i].button(title, use_container_width=True, type="primary" if st.session_state.view == title else "secondary", key=f"tab_btn_main_{i}"):
         st.session_state.view = title
         st.rerun()
 
@@ -242,7 +241,7 @@ if st.session_state.view == "📜 Scribe de Destinée":
         
         actions = st.columns(4)
         with actions[0]:
-            if st.button("🔱 Lancer la Réflexion", use_container_width=True, key="act_run"):
+            if st.button("🔱 Lancer la Réflexion", use_container_width=True, key="act_run_main"):
                 if user_input or up_file:
                     active_c["messages"].append({"role": "user", "content": user_input if user_input else "Analyse du document."})
                     
@@ -267,13 +266,13 @@ if st.session_state.view == "📜 Scribe de Destinée":
                     st.rerun()
         
         with actions[1]:
-            if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="act_at"):
+            if st.button("🎨 Atelier de Ninharsag", use_container_width=True, key="act_at_main"):
                 st.session_state.view = "🎨 Atelier de Ninharsag"; st.rerun()
         with actions[2]:
-            if st.button("🎬 Visions de Veo 3", use_container_width=True, key="act_vi"):
+            if st.button("🎬 Visions de Veo 3", use_container_width=True, key="act_vi_main"):
                 st.session_state.view = "🎬 Visions de Veo 3"; st.rerun()
         with actions[3]:
-            if st.button("🎼 Fréquences de Lyria", use_container_width=True, key="act_ly"):
+            if st.button("🎼 Fréquences de Lyria", use_container_width=True, key="act_ly_main"):
                 st.session_state.view = "🎼 Fréquences de Lyria"; st.rerun()
 
 # 2. ATELIER
