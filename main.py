@@ -5,8 +5,8 @@ import io
 import requests
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v6.3 (Flawless Matrix) ---
-st.set_page_config(page_title="ENKI v6.3 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.4 (Awakened Synapse) ---
+st.set_page_config(page_title="ENKI v6.4 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -41,7 +41,7 @@ def prepare_image_for_gemini(raw_bytes):
 def get_best_model_name():
     try:
         dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for pref in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro"]:
+        for pref in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-2.5-flash", "models/gemini-1.5-pro"]:
             if pref in dispos:
                 return pref.replace("models/", "")
         if dispos:
@@ -59,9 +59,8 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_sage_response" not in st.session_state: st.session_state.last_sage_response = ""
 if "view" not in st.session_state: st.session_state.view = "📜 Scribe de Destinée"
 
-# --- SYSTÈME DE RÉINITIALISATION SÉCURISÉ (FIX STREAMLIT EXCEPTION) ---
+# Système de réinitialisation sécurisé des Sceaux
 if "seal_reset_key" not in st.session_state: st.session_state.seal_reset_key = 0
-if "seal_auto_desc" not in st.session_state: st.session_state.seal_auto_desc = ""
 
 # Stockage Images/Vidéos 
 if "last_gen_bytes" not in st.session_state: st.session_state.last_gen_bytes = None
@@ -144,9 +143,7 @@ with st.sidebar:
     
     with st.expander("➕ Créer un Sceau (Persistance)", expanded=False):
         
-        # Utilisation de la clé de reset pour contourner l'Exception de Streamlit
         k = st.session_state.seal_reset_key
-        
         nom_sceau = st.text_input("Nom de l'élément (Ex: Ea)", key=f"v_n_{k}")
         upload_sceau = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=f"v_u_{k}")
         
@@ -158,12 +155,14 @@ with st.sidebar:
                         prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
                         
                         resp = model.generate_content(prompt_analyse)
-                        st.session_state.seal_auto_desc = resp.text
+                        
+                        # INJECTION ABSOLUE : On force la case à accepter le texte du Sage
+                        st.session_state[f"v_d_{k}"] = resp.text
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erreur d'extraction : {e}")
         
-        desc_sceau = st.text_area("2. Physique / Description", value=st.session_state.seal_auto_desc, height=150, key=f"v_d_{k}", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
+        desc_sceau = st.text_area("2. Physique / Description", height=150, key=f"v_d_{k}", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
         url_sceau = st.text_input("Ou URL de l'image (Lien direct)", key=f"v_url_{k}")
         
         if st.button("3. Graver le Sceau", type="primary"):
@@ -172,7 +171,8 @@ with st.sidebar:
                 
                 st.session_state.vault.append({
                     "name": nom_sceau, 
-                    "desc": desc_sceau, 
+                    # On sauvegarde la valeur officielle du champ texte
+                    "desc": st.session_state.get(f"v_d_{k}", ""), 
                     "refs": saved_refs, 
                     "url": url_sceau,
                     "active": True
@@ -180,7 +180,6 @@ with st.sidebar:
                 
                 # Le nettoyage parfait : on change l'identité des cases pour les vider
                 st.session_state.seal_reset_key += 1
-                st.session_state.seal_auto_desc = ""
                 st.rerun()
             else:
                 st.warning("Le nom de l'élément est obligatoire.")
@@ -215,7 +214,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v6.3 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v6.4 : The Visual Continuity Revolution")
 st.caption(f"🚀 Moteur Actif : {nom_modele_actif} | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
