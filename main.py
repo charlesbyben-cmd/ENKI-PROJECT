@@ -6,8 +6,8 @@ import requests
 import urllib.parse
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v7.0 (The Genetic Loom - True img2img) ---
-st.set_page_config(page_title="ENKI v7.0 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v7.1 (The Abzu Purification - Stabilized) ---
+st.set_page_config(page_title="ENKI v7.1 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -80,7 +80,7 @@ active_c = st.session_state.chronicles[st.session_state.active_idx]
 # --- SIDEBAR : ARCHIVES D'ABZU ---
 with st.sidebar:
     st.title("🧠 Archives d'Abzu")
-    st.subheader("Fréquence de l'Oracle")
+    st.subheader("📡 Fréquence de l'Oracle")
     mode_op = st.radio("Mode dOpération :", ["Oracle Universel", "Le Sage"], key="radio_mode")
     
     st.divider()
@@ -145,8 +145,7 @@ with st.sidebar:
                         st.error(f"Erreur d'analyse : {e}")
         
         desc_sceau = st.text_area("2. Physique / Description", height=150, key=f"v_d_{k}", placeholder="La description technique en anglais apparaîtra ici...")
-        # C'EST ICI QUE LE CLONAGE SE JOUE : L'URL DU MODÈLE GÉNÉTIQUE
-        url_sceau = st.text_input("3. Ou URL de l'image de clonage (Métier Génétique)", key=f"v_url_{k}", placeholder="Lien public DIRECT finit par .jpg ou .png")
+        url_sceau = st.text_input("3. URL de l'image de clonage (Métier Génétique - Inactif en v7.1)", key=f"v_url_{k}", placeholder="Désactivé pour stabilisation")
         
         if st.button("4. Graver le Sceau", type="primary"):
             if nom_sceau: 
@@ -156,7 +155,8 @@ with st.sidebar:
                     "name": nom_sceau, 
                     "desc": st.session_state.get(f"v_d_{k}", ""), 
                     "refs": saved_refs, 
-                    "url": url_sceau, # On grave l'URL génétique
+                    # Désactivé pour stabilisation
+                    "url": None, 
                     "active": True
                 })
                 st.session_state.seal_reset_key += 1
@@ -165,7 +165,6 @@ with st.sidebar:
                 st.warning("Le nom de l'élément est obligatoire.")
 
     active_ctx = ""
-    genetic_template_url = None # Va stocker l'image ADN coché
     active_seal_images = [] 
     
     for i, seal in enumerate(st.session_state.vault):
@@ -174,10 +173,6 @@ with st.sidebar:
             if seal.get('desc'):
                 active_ctx += f" Character {seal['name']} appearance: {seal['desc']}."
             
-            # C'EST ICI : Si le sceau est coché et contient une URL génétique, on la capture pour l'Atelier
-            if not genetic_template_url and seal.get('url'):
-                genetic_template_url = seal['url']
-                
             if seal.get('refs'):
                 cols = st.columns(min(len(seal['refs']), 4)) 
                 for idx, img_bytes in enumerate(seal['refs']):
@@ -192,7 +187,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v7.0 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v7.1 : The Visual Continuity Revolution")
 st.caption(f"🚀 Moteur Actif : {nom_modele_actif} | Manifestation Réelle : ACTIVÉE")
 
 nav = st.columns(4)
@@ -246,11 +241,11 @@ if st.session_state.view == "📜 Scribe de Destinée":
         with actions[3]:
             if st.button("🎼 Fréquences de Lyria", use_container_width=True): st.session_state.view = "🎼 Fréquences de Lyria"; st.rerun()
 
-# 2. ATELIER (True Image-to-Image / Métier Génétique)
+# 2. ATELIER (Stabilized Prompt Injection)
 elif st.session_state.view == "🎨 Atelier de Ninharsag":
     st.header("🎨 Atelier de Ninharsag")
     
-    esthetiques_uniques = ["Photo-réel Brut (8k Leica Leica Leica)", "Concept Art UE5 Unreal Engine 5 cinématique", "Chroniques de Dilmun (Manga Ultra-Fidélité)", "Sourire de Babylone (Pixar Haute Fidélité)", "Bas-relief Royal"]
+    esthetiques_uniques = ["Photo-réel Brut Leica cinématique cinématique cinématique cinématique", "Concept Art UE5 Unreal Engine 5 cinématique", "Chroniques de Dilmun (Manga Ultra-Fidélité)", "Sourire de Babylone (Pixar Haute Fidélité)", "Bas-relief Royal"]
     
     col_a1, col_a2 = st.columns(2)
     with col_a1:
@@ -261,11 +256,6 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
     with col_a2:
         qualite_input = st.select_slider("Qualité Rendu", options=["720p", "1080p", "2K", "4K", "8K"], key="in_at_qual")
         style_input = st.selectbox("Esthétique Maître", esthetiques_uniques, key="in_at_aesthetic", on_change=on_aesthetic_change)
-        
-        # NOUVEAU : Le contrôleur génétique
-        if genetic_template_url:
-            st.success(f"🧬 Modèle Génétique Verrouillé par le Sceau : Ea")
-            st.image(genetic_template_url, width=150, caption="ADN Source d'Ea")
 
     at_manual_submit = st.button("🚀 Graver & Manifester", use_container_width=True)
 
@@ -273,33 +263,23 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         st.session_state.trigger_atelier_regeneration = False
 
         if vision_input:
-            with st.spinner("La vision se matérialise sur le Métier Génétique..."):
+            with st.spinner("La vision se matérialise..."):
                 if moteur_input == "Nano Banana 2":
                     
+                    # Standard prompt construction
                     prompt_complet = vision_input
                     
-                    # On ajoute la description technique en anglais si un sceau est coché
                     if active_ctx.strip():
-                        prompt_complet += f". Detailed physical characteristics to follow: {active_ctx}"
+                        # We use text context for continuity in v7.1
+                        prompt_complet += f". Detailed physical characteristics to strictly follow: {active_ctx}"
                     
-                    # ENCODAGE URLLIB POIDS LOURD
-                    # C'EST ICI LE VRAI PONT NEURAL : L'ADN EST INJECTÉ
-                    # Le moteur Pollinations supporte `image.pollinations.ai/prompt/URL+PROMPT`
+                    # Simplification Fix (v7.1): Combine and encode as a single stable text prompt.
+                    # We remove the breaking 'url+text' logic.
+                    combined_text_to_encode = f"{prompt_complet} aesthetic {style_input} {format_img_input}"
+                    final_prompt_path_encoded = urllib.parse.quote(combined_text_to_encode)
                     
-                    # 1. On prepare le texte encodé
-                    prompt_text_encoded = urllib.parse.quote(prompt_complet)
-                    aesthetic_encoded = urllib.parse.quote(f" aesthetic {style_input}")
-                    format_encoded = urllib.parse.quote(f" {format_img_input}")
-                    
-                    # 2. On fusionne avec l'ADN ou pas
-                    if genetic_template_url:
-                        # Injection img2img : URL_SOURCE + PROMPT_TEXTUEL
-                        final_prompt_path = f"{urllib.parse.quote(genetic_template_url)}+{prompt_text_encoded}{aesthetic_encoded}{format_encoded}"
-                    else:
-                        # Génération standard si aucun sceau n'est actif
-                        final_prompt_path = f"{prompt_text_encoded}{aesthetic_encoded}{format_encoded}"
-                        
-                    url = f"https://image.pollinations.ai/prompt/{final_prompt_path}?nologo=true&enhance=true&quality=9"
+                    # Simplified standard URL without breaking image injection
+                    url = f"https://image.pollinations.ai/prompt/{final_prompt_path_encoded}?nologo=true&enhance=true&quality=9"
                     
                     try:
                         response = requests.get(url)
@@ -332,9 +312,9 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
         if st.session_state.last_gen_bytes:
             c_dl1, c_dl2 = st.columns(2)
             with c_dl1:
-                st.download_button(label="📥 Télécharger en PNG", data=st.session_state.last_gen_bytes, file_name="Manifestation.png", mime="image/png", use_container_width=True, key="dl_main_png")
+                st.download_button(label="📥 PNG", data=st.session_state.last_gen_bytes, file_name="Manifestation.png", mime="image/png", use_container_width=True, key="dl_main_png")
             with c_dl2:
-                st.download_button(label="📸 Télécharger en JPEG (Galerie)", data=convert_to_jpeg(st.session_state.last_gen_bytes), file_name="Manifestation.jpg", mime="image/jpeg", use_container_width=True, key=f"dl_jpg_{datetime.now().strftime('%H%M%S')}")
+                st.download_button(label="📸 JPEG", data=convert_to_jpeg(st.session_state.last_gen_bytes), file_name="Manifestation.jpg", mime="image/jpeg", use_container_width=True, key=f"dl_jpg_{datetime.now().strftime('%H%M%S')}")
 
 # 3. VISIONS (Code masqué pour la clarté de la réponse, garde ton bloc actuel)
 elif st.session_state.view == "🎬 Visions de Veo 3":
