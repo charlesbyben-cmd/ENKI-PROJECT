@@ -3,10 +3,11 @@ import google.generativeai as genai
 import PIL.Image
 import io
 import requests
+import urllib.parse
 from datetime import datetime
 
-# --- CONFIGURATION STRICTE v6.4 (Awakened Synapse) ---
-st.set_page_config(page_title="ENKI v6.4 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
+# --- CONFIGURATION STRICTE v6.5 (The Babel Protocol) ---
+st.set_page_config(page_title="ENKI v6.5 : The Visual Continuity Revolution", layout="wide", page_icon="🏛️")
 
 # Configuration des Clés API
 if "GEMINI_API_KEY" in st.secrets:
@@ -41,7 +42,7 @@ def prepare_image_for_gemini(raw_bytes):
 def get_best_model_name():
     try:
         dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for pref in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-2.5-flash", "models/gemini-1.5-pro"]:
+        for pref in ["models/gemini-1.5-flash", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro"]:
             if pref in dispos:
                 return pref.replace("models/", "")
         if dispos:
@@ -148,21 +149,20 @@ with st.sidebar:
         upload_sceau = st.file_uploader("1. Upload Image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=f"v_u_{k}")
         
         if upload_sceau:
-            if st.button("👁️ Extraire l'Essence", use_container_width=True):
-                with st.spinner("Extraction de l'essence divine en cours..."):
+            if st.button("👁️ Extraire l'Essence (Anglais Optimisé)", use_container_width=True):
+                with st.spinner("Traduction de l'essence visuelle pour l'Atelier..."):
                     try:
                         imgs_to_analyze = [prepare_image_for_gemini(f.getvalue()) for f in upload_sceau]
-                        prompt_analyse = ["Décris avec une précision absolue et exhaustive le physique, le visage (barbe, cheveux, regard), les vêtements et les caractéristiques distinctives de ce sujet. Rédige-le sous forme de prompt ultra-détaillé et factuel pour cloner ce personnage dans un générateur d'images. Sois direct, pas d'introduction."] + imgs_to_analyze
+                        # PROMPT D'ANALYSE CORRIGÉ POUR L'ANGLAIS TECHNIQUE
+                        prompt_analyse = ["Analyze these reference images of the character. Write a highly detailed, comma-separated prompt in ENGLISH describing their physical appearance, face shape, hair style, beard style, clothing, and distinct features. This will be used directly for an image generator. DO NOT use introductory text. Just output the English keywords."] + imgs_to_analyze
                         
                         resp = model.generate_content(prompt_analyse)
-                        
-                        # INJECTION ABSOLUE : On force la case à accepter le texte du Sage
                         st.session_state[f"v_d_{k}"] = resp.text
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erreur d'extraction : {e}")
         
-        desc_sceau = st.text_area("2. Physique / Description", height=150, key=f"v_d_{k}", placeholder="Laisse l'Œil extraire l'essence ou écris-la toi-même...")
+        desc_sceau = st.text_area("2. Physique / Description", height=150, key=f"v_d_{k}", placeholder="L'Essence s'écrira ici en anglais pour le moteur...")
         url_sceau = st.text_input("Ou URL de l'image (Lien direct)", key=f"v_url_{k}")
         
         if st.button("3. Graver le Sceau", type="primary"):
@@ -171,14 +171,12 @@ with st.sidebar:
                 
                 st.session_state.vault.append({
                     "name": nom_sceau, 
-                    # On sauvegarde la valeur officielle du champ texte
                     "desc": st.session_state.get(f"v_d_{k}", ""), 
                     "refs": saved_refs, 
                     "url": url_sceau,
                     "active": True
                 })
                 
-                # Le nettoyage parfait : on change l'identité des cases pour les vider
                 st.session_state.seal_reset_key += 1
                 st.rerun()
             else:
@@ -191,7 +189,8 @@ with st.sidebar:
         seal["active"] = st.checkbox(f"Sceau : {seal['name']}", value=seal["active"], key=f"s_c_main_{i}")
         if seal["active"]:
             if seal.get('desc'):
-                active_ctx += f" [Personnage/Objet '{seal['name']}': {seal['desc']}]"
+                # Formatage plus propre pour l'injection
+                active_ctx += f" Character {seal['name']} appearance: {seal['desc']}."
             
             if seal.get('refs'):
                 cols = st.columns(min(len(seal['refs']), 4)) 
@@ -214,7 +213,7 @@ with st.sidebar:
         st.rerun()
 
 # --- INTERFACE PRINCIPALE ---
-st.title("🏛️ ENKI v6.4 : The Visual Continuity Revolution")
+st.title("🏛️ ENKI v6.5 : The Visual Continuity Revolution")
 st.caption(f"🚀 Moteur Actif : {nom_modele_actif} | Manifestation Réelle : ACTIVÉE")
 
 # NAVIGATION SUPÉRIEURE
@@ -299,11 +298,16 @@ elif st.session_state.view == "🎨 Atelier de Ninharsag":
                 if moteur_input == "Nano Banana 2":
                     
                     prompt_complet = vision_input
+                    # INJECTION AUTORITAIRE DE L'ESSENCE EN ANGLAIS
                     if active_ctx.strip():
-                        prompt_complet += f". Consignes visuelles obligatoires : {active_ctx}"
+                        prompt_complet += f". Detailed physical characteristics to strictly follow: {active_ctx}"
                         
-                    encoded_prompt = prompt_complet.replace(" ", "%20").replace("\n", "%20")
-                    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}%20aesthetic%20{style_input}%20{format_img_input}?nologo=true&enhance=true"
+                    # ENCODAGE URLLIB BLINDÉ POUR NE PAS CASSER LE LIEN DE L'ATELIER
+                    encoded_prompt = urllib.parse.quote(prompt_complet)
+                    encoded_style = urllib.parse.quote(f" aesthetic {style_input}")
+                    encoded_format = urllib.parse.quote(f" {format_img_input}")
+                    
+                    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}{encoded_style}{encoded_format}?nologo=true&enhance=true"
                     
                     try:
                         response = requests.get(url)
